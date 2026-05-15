@@ -1,0 +1,41 @@
+# Local dev stack: MySQL + Redis only. LLM via cloud API (see application-dev.properties).
+# Start: docker compose up -d
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: werewolf-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: werewolf
+      MYSQL_USER: werewolf
+      MYSQL_PASSWORD: werewolf
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: werewolf-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  mysql_data:
+  redis_data:

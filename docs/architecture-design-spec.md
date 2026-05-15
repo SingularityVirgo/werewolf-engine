@@ -2,9 +2,9 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.2 |
+| 版本 | v1.3 |
 | 日期 | 2026-05-15 |
-| 状态 | 与 [PRD v1.0.3](requirements-mvp-v0.1.md) 及 [技术选型](tech-selection-feasibility.md) **对齐** |
+| 状态 | 与 [PRD v1.0.4](requirements-mvp-v0.1.md) 及 [技术选型 v0.1.5](tech-selection-feasibility.md) **对齐** |
 | 适用范围 | MVP 后端（12 人局、单实例、无消息队列） |
 | 课题 | **AI 狼人杀 — Agent Team 实战**（多智能体协作/对抗 + 对局引擎 + 可观测） |
 
@@ -96,7 +96,7 @@ flowchart LR
   Engine -->|HTTPS| LLM
 ```
 
-- **外部系统**：LLM（OpenAI 兼容 API，如百炼 qwen-plus / 开发期 Ollama）、MySQL、Redis。
+- **外部系统**：LLM（**DeepSeek 官方** OpenAI 兼容 API，`deepseek-v4-flash` / 可选 `deepseek-v4-pro`）、MySQL、Redis。
 
 ### 4.2 容器（Container）
 
@@ -349,8 +349,8 @@ flowchart TB
 
 | 环境 | 说明 |
 |------|------|
-| dev | 本地 MySQL/Redis/Ollama；可 `spring.profiles.active=dev` |
-| prod | WSS、密钥来自环境变量；LLM 走百炼等生产端点 |
+| dev | 本地 MySQL/Redis（`docker compose`）；LLM 与 prod 同 DeepSeek 端点；`spring.profiles.active=dev` |
+| prod | WSS、密钥来自环境变量；LLM `DEEPSEEK_API_KEY` + `https://api.deepseek.com/v1` |
 
 ### 10.3 可用性声明（MVP）
 
@@ -406,6 +406,7 @@ flowchart TB
 | v1.0 | 2026-05-15 | 初稿：MVP 架构设计说明书，与 PRD v1.0.0 及技术选型文档对齐 |
 | v1.1 | 2026-05-15 | **课题对齐**：§2.3 能力分层、§8.4 Agent Team 拓扑、观战上下文图、§9.3 进阶预留、可观测与非目标更新 |
 | v1.2 | 2026-05-15 | **R17a**：§8.4 狼队商议门闩与 PRD v1.0.3 对齐 |
+| v1.3 | 2026-05-16 | LLM 改为 DeepSeek 官方 API；§4.1、§10.2 与 PRD v1.0.4 对齐 |
 
 ---
 

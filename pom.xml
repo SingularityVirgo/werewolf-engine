@@ -28,11 +28,42 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <!-- Spring Boot 4 requires langchain4j *-spring-boot4-starter (see architecture-design-spec §9.1) -->
+        <langchain4j.version>1.15.0-beta25</langchain4j.version>
     </properties>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-spring-boot4-starter</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-open-ai-spring-boot4-starter</artifactId>
+            <version>${langchain4j.version}</version>
         </dependency>
 
         <dependency>

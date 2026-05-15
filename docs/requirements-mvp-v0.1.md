@@ -1,9 +1,9 @@
-# 狼人杀后端系统需求文档（MVP v1.0.3）
+# 狼人杀后端系统需求文档（MVP v1.0.4）
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.0.3（**R17** 含服务端商议门闩；其余规则/协议 **v1.0.0 仍冻结**） |
-| 日期 | 2026-05-15 |
+| 版本 | v1.0.4（**LLM** 改 DeepSeek 官方 API；**R17/R17a** 等规则/协议 **v1.0.0 仍冻结**） |
+| 日期 | 2026-05-16 |
 | 范围 | 后端核心系统；**观战 UI 为课题加分项**，规格见 §1.5 |
 | 项目名 | werewolf-engine |
 | 课题 | **AI 狼人杀 — 多智能体协作与博弈的 Agent Team 实战** |
@@ -87,8 +87,8 @@
 | AI | LangChain4j 0.31.x | A 负责 |
 | DB | MySQL 8.0 | |
 | 缓存 | Redis 7.x | |
-| LLM 开发 | Ollama + qwen2.5:7b | |
-| LLM 上线 | 阿里云百炼 qwen-plus（OpenAI 兼容 API） | 单局单厂商单模型 |
+| LLM（dev / prod） | **DeepSeek 官方 API**（OpenAI 兼容） | 默认 `deepseek-v4-flash`；可选 `deepseek-v4-pro`；**不经千问/百炼** |
+| LLM 密钥 | 环境变量 `DEEPSEEK_API_KEY` | 申请：https://platform.deepseek.com/api_keys |
 
 ---
 
@@ -532,7 +532,7 @@ GAME_OVER
 
 | 组件 | 用途 |
 |------|------|
-| `ChatLanguageModel` | 调用 qwen-plus / Ollama |
+| `ChatLanguageModel` | 调用 DeepSeek（`deepseek-v4-flash` / `deepseek-v4-pro`） |
 | `ChatMemory` | `MessageWindowChatMemory`，max 50 |
 | `SystemMessageProvider` | Base + Persona + Context 动态拼接 |
 | `@Tool` / `GameTools` | 查状态、提交意图（不直接改 SM） |
@@ -589,9 +589,11 @@ GAME_OVER
 
 #### 4.5.6 LLM 配置
 
-- **单局单厂商单模型**；禁止同局混用 Claude/GPT/通义
-- 开发：`Ollama` `qwen2.5:7b`
-- 上线：`qwen-plus`，`baseUrl=https://dashscope.aliyuncs.com/compatible-mode/v1`
+- **单局单厂商单模型**；禁止同局混用 Claude/GPT/通义/百炼等
+- **dev / prod 统一**：DeepSeek 官方 `https://api.deepseek.com/v1`
+- 默认模型：`deepseek-v4-flash`；更强推理可配置 `deepseek-v4-pro`（仍须单局单模型）
+- LangChain4j：`langchain4j-open-ai-spring-boot4-starter` + `base-url` / `api-key` 指向 DeepSeek（见 [application-dev.properties](../src/main/resources/application-dev.properties)）
+- **不必使用千问平台**：千问侧 DeepSeek 为托管路由，模型 ID 与计费可能与官方不一致；MVP 直连官方 API
 
 #### 4.5.7 Prompt 分层（不写进 System Prompt 的）
 
@@ -893,7 +895,7 @@ ws://{host}:{port}/ws/game?token={token}
   "timestamp": 1715760000000,
   "requestId": "optional-uuid",
   "thinking": "optional, debug only",
-  "modelId": "optional, e.g. qwen-plus"
+  "modelId": "optional, e.g. deepseek-v4-flash"
 }
 ```
 
@@ -1105,8 +1107,8 @@ com.werewolfengine
 
 | 天 | 目标 |
 |----|------|
-| D1-3 | LangChain4j 接入（Ollama），至少 1 种角色 AI |
-| D4-5 | 切 qwen-plus；C 跑 100 局压测 |
+| D1-3 | LangChain4j 接入 DeepSeek API，至少 1 种角色 AI |
+| D4-5 | 全角色 AI + C 跑 100 局压测（同端点，无 dev/prod 切模型） |
 | D6-7 | 真人 + Bot 混合；Bugfix |
 
 ### 8.4 Day7 冻结会签字项
@@ -1219,6 +1221,7 @@ com.werewolfengine
 | v1.0.1 | 2026-05-15 | **课题对齐**：§1.0/§1.5 Agent Team 与能力分层、§4.5.8 信息隔离、§4.7.3 可观测、场景 S2b、加分观战 UI；**不改变** v1.0.0 已冻结协议/规则 |
 | v1.0.2 | 2026-05-15 | **R17 修订**：自刀战术允许狼队 `WOLF_CHAT` 商议后，**其他狼人** `KILL` 可指向狼队友 A（不限于 A 自指）；校验与 §4.3.3/§3.3 同步 |
 | v1.0.3 | 2026-05-15 | **R17a**：服务端强制「刀存活狼人前本 `NIGHT_WOLF` 须先有狼队频道消息」；§4.3.6、`WOLF_CHAT_REQUIRED`、`PHASE_SYNC.wolfChatInPhase`、Redis 门闩键 |
+| v1.0.4 | 2026-05-16 | **LLM**：dev/prod 统一 **DeepSeek 官方 API**（`deepseek-v4-flash`）；移除 Ollama / 百炼 qwen-plus；§0.5、§4.5.6、§8.3 |
 
 ---
 

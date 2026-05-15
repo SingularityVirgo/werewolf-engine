@@ -2,9 +2,9 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v0.1.4 |
+| 版本 | v0.1.5 |
 | 日期 | 2026-05-15 |
-| 关联文档 | [requirements-mvp-v0.1.md](./requirements-mvp-v0.1.md)（**v1.0.3**，含 R17a）、[architecture-design-spec.md](./architecture-design-spec.md) |
+| 关联文档 | [requirements-mvp-v0.1.md](./requirements-mvp-v0.1.md)（**v1.0.4**，含 R17a / DeepSeek LLM）、[architecture-design-spec.md](./architecture-design-spec.md) |
 | 项目 | werewolf-engine（**Agent Team 实战** — 12 人预女猎白 + 白痴，人机混排 MVP） |
 
 ---
@@ -20,7 +20,7 @@
 | 维度 | 结论 |
 |------|------|
 | **总体可行性** | **可行**。核心难点在服务端状态机与夜晚并发仲裁，而非语言选型；12 人 + WS + 单实例在工程上成熟。 |
-| **推荐主栈** | **Java 21** + Spring Boot 4.x + Spring WebSocket + MySQL + Redis + LangChain4j + 兼容 OpenAI 的云端 LLM（上线）/ Ollama（开发）；**Spring 虚拟线程**处理阻塞 I/O。 |
+| **推荐主栈** | **Java 21** + Spring Boot 4.x + Spring WebSocket + MySQL + Redis + LangChain4j + **DeepSeek 官方 API**（OpenAI 兼容，`deepseek-v4-flash`）；**Spring 虚拟线程**处理阻塞 I/O。 |
 | **不推荐首版** | 多厂商 LLM 混用、多实例集群、语音、警长全量规则与前端并行首周开发。 |
 | **关键路径** | Week1 用 **Mock AI** 跑通整局；协议 Day7 冻结后再扩 LLM 与前端。 |
 | **课题对齐** | 对局引擎 + 多 Agent + 信息隔离 + 结构化日志 = **MVP 主交付**；观战 UI = **加分**；进阶三选一 = **MVP 后** |
@@ -159,15 +159,16 @@ flowchart TB
 
 ---
 
-### 4.6 大模型：Ollama（开发）与云端 qwen-plus（上线）
+### 4.6 大模型：DeepSeek 官方 API（dev / prod 统一）
 
-| 阶段 | 模型 | 作用 |
-|------|------|------|
-| 开发 / CI | Ollama + qwen2.5:7b | 零边际成本调 Prompt、跑通 Agent 链路 |
-| 联调 / 预发 | 与线上一致的一条 API（如百炼） | 消除「本地能跑、线上崩」 |
-| 上线 | **单厂商单模型**（如 qwen-plus） | 延迟、价格、中文与格式遵循率综合最优 |
+| 项 | 选型 |
+|------|------|
+| 接入方式 | **直连** [DeepSeek API](https://api.deepseek.com)（OpenAI 兼容）；**不经过** 千问 / 阿里云百炼等中转 |
+| 默认模型 | `deepseek-v4-flash`（对局多轮调用，延迟与成本更优） |
+| 可选升级 | `deepseek-v4-pro`（更强推理；同局仍须单模型） |
+| 配置 | `application-dev.properties`：`base-url=https://api.deepseek.com/v1`，密钥 `DEEPSEEK_API_KEY` |
 
-**结论**：禁止 **同局内** 多厂商混用（格式与延迟方差大）；角色差异用 **Prompt + temperature**，不用多模型硬切。
+**结论**：禁止 **同局内** 多厂商混用（格式与延迟方差大）；角色差异用 **Prompt + temperature**，不用多模型硬切。千问平台上架的 DeepSeek 与官方 API **模型 ID、计费、延迟可能不同**，MVP 统一官方端点，避免 dev/prod 双路径。
 
 **可行性**：中高。成本按局数估算即可（MVP 日活低时费用可忽略）；需 **3s 调用超时 + 规则 fallback**（PRD 已要求）。
 
@@ -284,6 +285,7 @@ flowchart TB
 | v0.1.2 | 2026-05-15 | 与 **PRD v1.0.0** 冻结对齐：WebSocket/Redis/Bot/开放决策收口；去除文档内 `[TBD]`；风险表改写 |
 | v0.1.3 | 2026-05-15 | **课题对齐**：结论摘要、§2 约束、架构图观战 UI；与 PRD v1.0.1 §1.0/§1.5 一致 |
 | v0.1.4 | 2026-05-15 | **R17a** 服务端门闩可行性；与 PRD v1.0.3 同步 |
+| v0.1.5 | 2026-05-16 | LLM 改为 **DeepSeek 官方 API**（`deepseek-v4-flash`）；移除 Ollama / 百炼 dev-prod 分叉 |
 
 ---
 
