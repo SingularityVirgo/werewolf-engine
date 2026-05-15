@@ -2,10 +2,11 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.0 |
+| 版本 | v1.1 |
 | 日期 | 2026-05-15 |
-| 状态 | 与 [PRD v1.0.0](requirements-mvp-v0.1.md) 及 [技术选型与可行性](tech-selection-feasibility.md) **对齐** |
+| 状态 | 与 [PRD v1.0.1](requirements-mvp-v0.1.md) 及 [技术选型 v0.1.3](tech-selection-feasibility.md) **对齐** |
 | 适用范围 | MVP 后端（12 人局、单实例、无消息队列） |
+| 课题 | **AI 狼人杀 — Agent Team 实战**（多智能体协作/对抗 + 对局引擎 + 可观测） |
 
 ---
 
@@ -39,6 +40,7 @@
 - **服务端权威**：游戏状态仅由 `GameStateMachine` 演进；客户端与 AI 只提交**意图**。
 - **可联调、可压测**：HTTP 建房 + WS 对局；`bot/` 可 12 路并发验证协议与状态机。
 - **可演进**：单实例 MVP 明确边界，多实例 / MQ / 向量库等为后序扩展，不污染首版路径。
+- **课题对齐**：**Agent Team**（每座位独立 Agent + 信息隔离）运行于 **权威状态机** 之上；**结构化日志**贯穿局内操作；观战 UI 为加分项，消费既有推送通道。
 
 ### 2.2 硬约束（来自 PRD 冻结项）
 
@@ -49,6 +51,16 @@
 | WebSocket **原生 WebSocketHandler** | 不使用 STOMP MVP；自管 Session 与路由表 |
 | Java **21** + 虚拟线程 | 阻塞 I/O（LLM、JDBC）不挤爆平台线程池；**禁止**用忙等轮询推进阶段 |
 | MySQL + Redis | 关系数据与热数据分离；详见第 6 章 |
+
+### 2.3 课题能力分层（架构视角）
+
+| 分层 | 架构落点 | 说明 |
+|------|----------|------|
+| **MVP** | `game` + `ai` + `gateway` + `action_log` | 对局引擎与多 Agent 同进程；见 §8、§9 |
+| **加分** | `Future_UI` / 观战客户端 | 只读 WS；脱敏 `PHASE_SYNC` 策略 P2 与 B 对齐 |
+| **进阶①** | `ai` 配置外置（Agent 描述文件） | SM 接口不变 |
+| **进阶②** | 评测服务 + 存储（可新模块 `eval`） | 读 `game_record`，不写局内热路径 |
+| **进阶③** | 离线 `optimizer` Job | 写回 Prompt/权重，不绕过 SM |
 
 ---
 
@@ -70,6 +82,7 @@
 flowchart LR
   Player[Human_Player]
   Bot[Bot_Client]
+  Spectator[Spectator_UI_bonus]
   Engine[werewolf-engine]
   LLM[LLM_Provider]
   DB[(MySQL)]
@@ -77,6 +90,7 @@ flowchart LR
 
   Player -->|HTTP_WSS| Engine
   Bot -->|HTTP_WSS| Engine
+  Spectator -->|WSS_readonly| Engine
   Engine --> DB
   Engine --> Cache
   Engine -->|HTTPS| LLM
@@ -256,6 +270,31 @@ SM 需要某 AI 座位行动
 
 **禁止**：AI 直接持有 `WebSocketSession` 或写数据库绕过 SM。
 
+### 8.4 Agent Team 拓扑（课题核心）
+
+一局 12 座位中，AI 座位在架构上视为 **并行 Agent 实例**，由 **单房间 SM** 串行接纳意图：
+
+```mermaid
+flowchart TB
+  subgraph room [roomId_single_writer]
+    SM[GameStateMachine]
+    subgraph agents [AgentTeam_max_12]
+      A1[Agent_playerId_1]
+      A2[Agent_playerId_k]
+    end
+    Log[action_log_writer]
+  end
+
+  SM -->|per_seat_GameView| A1
+  SM -->|per_seat_GameView| A2
+  A1 -->|intent_JSON| SM
+  A2 -->|intent_JSON| SM
+  SM --> Log
+```
+
+- **信息隔离**：`GameView` 构造器按当前 `phase` 与 `playerId` 裁剪字段，与 Gateway 定向推送规则同源。
+- **协作/对抗**：狼人刀口在 `NIGHT_WOLF` 阶段内收集；胜负仅 `WinChecker` 输出。
+
 ---
 
 ## 9. AI 子系统架构
@@ -274,6 +313,14 @@ SM 需要某 AI 座位行动
 | `GameTools` | 只读查询局况；若需写状态须回调 SM（推荐：**Tools 只读**，写走 SM API） |
 | `AIService` | 超时、重试策略（PRD：JSON 失败重试 0 次）、fallback 与日志 |
 | `MockAIPlayer` | Week1 无 LLM 跑通闭环 |
+
+### 9.3 与课题进阶方向的架构预留
+
+| 方向 | 预留方式 | MVP 是否实现 |
+|------|----------|----------------|
+| ① 通用 Agent | `ai` 包内 Prompt/Tools 读配置目录 | 否 |
+| ② 评测+复盘 | `game_record.action_log` + 可选 `eval` 模块 | 仅日志字段 |
+| ③ 自进化 | 离线任务写配置；运行时只读 | 否 |
 
 ---
 
@@ -317,8 +364,9 @@ flowchart TB
 |------|----------------|
 | 延迟 | 阶段切换不含 LLM 目标 &lt; 500ms（PRD）；LLM P95 &lt; 3s + fallback |
 | 安全 | token 不落日志明文；HTTPS/WSS；最小权限 DB 账号 |
-| 观测 | 日志结构化（`roomId`、`playerId`、`requestId`）；健康检查；Actuator 可选 |
-| 测试 | `gateway`/`game` 单元测试 + `bot/` 集成压测（PRD 第 8 章） |
+| 观测 | **课题必达**：`action_log` 全序列 + 结构化日志（`roomId`、`playerId`、`requestId`、`phase`）；`thinking` 仅日志通道 |
+| 测试 | `gateway`/`game` 单元测试 + `bot/` 集成压测（PRD 第 8 章）；S2 纯 AI 局日志可还原 |
+| 信息隔离 | 定向推送 + `GameView` 裁剪；评审用例覆盖狼/预/女私密字段 |
 
 ---
 
@@ -329,7 +377,9 @@ flowchart TB
 | 消息队列 | 不引入；削峰延后 |
 | 多实例房间 | 单 JVM 内完成一局；后续若水平扩展需 **sticky session** 或 **房间级状态外置** 专项设计 |
 | 警长完整规则链 | PRD 已排除 MVP |
-| 前端 SPA 架构 | 本文仅预留 Future UI 容器 |
+| 观战 UI 实现细节 | **加分项**；本文仅定义只读消费推送，UI 技术栈不在范围 |
+| 进阶①③ 在线自改 Agent | MVP 不做；须离线审计后发布配置 |
+| Leaderboard 服务 | **进阶②**；MVP 仅预留 `action_log` / `modelId` 字段 |
 
 ---
 
@@ -337,8 +387,11 @@ flowchart TB
 
 | PRD 章节 | 本文章节 |
 |----------|------------|
+| §1.0 / §1.5 课题与进阶 | §2.3、§8.4、§9.3、§12 |
 | §4.1 系统架构 | §4.3、§5 |
 | §4.2～4.7 功能模块 | §4.3、§6～9 |
+| §4.5.8 Agent Team | §8.4、§9 |
+| §4.7.3 可观测 | §6、§11 |
 | §5 非功能 | §2.2、§10.3、§11 |
 | §6 接口 | §5、§7 |
 | §7 包与依赖 | §3、§4.3 |
@@ -350,6 +403,7 @@ flowchart TB
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | v1.0 | 2026-05-15 | 初稿：MVP 架构设计说明书，与 PRD v1.0.0 及技术选型文档对齐 |
+| v1.1 | 2026-05-15 | **课题对齐**：§2.3 能力分层、§8.4 Agent Team 拓扑、观战上下文图、§9.3 进阶预留、可观测与非目标更新 |
 
 ---
 

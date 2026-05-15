@@ -2,10 +2,10 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v0.1.2 |
+| 版本 | v0.1.3 |
 | 日期 | 2026-05-15 |
-| 关联文档 | [requirements-mvp-v0.1.md](./requirements-mvp-v0.1.md) |
-| 项目 | werewolf-engine（12 人预女猎白 + 白痴，人机混排 MVP） |
+| 关联文档 | [requirements-mvp-v0.1.md](./requirements-mvp-v0.1.md)（v1.0.1 课题对齐）、[architecture-design-spec.md](./architecture-design-spec.md) |
+| 项目 | werewolf-engine（**Agent Team 实战** — 12 人预女猎白 + 白痴，人机混排 MVP） |
 
 ---
 
@@ -23,6 +23,7 @@
 | **推荐主栈** | **Java 21** + Spring Boot 4.x + Spring WebSocket + MySQL + Redis + LangChain4j + 兼容 OpenAI 的云端 LLM（上线）/ Ollama（开发）；**Spring 虚拟线程**处理阻塞 I/O。 |
 | **不推荐首版** | 多厂商 LLM 混用、多实例集群、语音、警长全量规则与前端并行首周开发。 |
 | **关键路径** | Week1 用 **Mock AI** 跑通整局；协议 Day7 冻结后再扩 LLM 与前端。 |
+| **课题对齐** | 对局引擎 + 多 Agent + 信息隔离 + 结构化日志 = **MVP 主交付**；观战 UI = **加分**；进阶三选一 = **MVP 后** |
 
 ---
 
@@ -38,6 +39,10 @@
 | AI：Agent + 记忆 + 工具 | Java 侧适合 **LangChain4j**；不建议首版自研 HTTP 轮询式 Agent。 |
 | MVP 单实例、可丢进行中局 | **无需**首周上 K8s、分片、强一致跨节点；Redis 可作缓存与连接映射，非强依赖集群。 |
 | 测试 Bot 独立进程 | Python/Node 均可，与后端语言解耦。 |
+| **课题：信息隔离** | 定向 WS + 每座位独立 Agent Context；`thinking` 仅日志，不经广播 |
+| **课题：可观测** | MySQL `action_log` + 结构化应用日志；支撑压测与进阶②复盘 |
+| **课题：观战 UI（加分）** | 复用现有 WS 推送；首版不为此引入新中间件 |
+| **课题：进阶三选一** | ① Agent 描述外置 ② 评测表 + Leaderboard ③ 离线优化闭环；均可在当前栈上演进，**不必** MVP 换语言 |
 
 ---
 
@@ -47,7 +52,7 @@
 flowchart TB
   subgraph clients [客户端与测试]
     Bot[Bot_Python_or_Node]
-    UI[未来Web_UI]
+    UI[观战UI_加分项]
   end
 
   subgraph app [werewolf-engine]
@@ -260,8 +265,10 @@ flowchart TB
 
 | PRD 章节 | 本文对应 |
 |----------|----------|
+| §1.0 / §1.5 课题与进阶 | 第 10 章 |
 | 0.5 技术栈约定 | 第 4 章展开 |
 | 4.1 架构 | 第 3 章一致 |
+| 4.5.8 / 4.7.3 Agent Team 与可观测 | §2 约束、第 10 章 |
 | 5 非功能 | 5.1、5.3 |
 | 8 里程碑 | 5.2 人力节奏 |
 | 9 风险 | 第 6 章对齐并补充 |
@@ -275,5 +282,20 @@ flowchart TB
 | v0.1 | 2026-05-15 | 初稿：技术选型与可行性分析 |
 | v0.1.1 | 2026-05-15 | 采用 **Java 21** + Spring **虚拟线程**说明与风险；T2 关闭 |
 | v0.1.2 | 2026-05-15 | 与 **PRD v1.0.0** 冻结对齐：WebSocket/Redis/Bot/开放决策收口；去除文档内 `[TBD]`；风险表改写 |
+| v0.1.3 | 2026-05-15 | **课题对齐**：结论摘要、§2 约束、架构图观战 UI；与 PRD v1.0.1 §1.0/§1.5 一致 |
+
+---
+
+## 10. 课题能力分层与进阶可行性（摘要）
+
+与 [PRD §1.0 / §1.5](./requirements-mvp-v0.1.md#10-课题定位与能力分层) 一致：
+
+| 分层 | 内容 | 技术可行性 |
+|------|------|------------|
+| **MVP 必做** | 状态机、LangChain4j 多座位 Agent、定向推送、`action_log` | **高** — 当前栈已覆盖 |
+| **加分** | 观战 UI（纯 AI / 人机混战） | **高** — 只读 WS 客户端；后端 P2 可补观战 token 策略 |
+| **进阶① 通用 Agent** | Prompt/Tools 外置与版本化 | **中** — 不需换框架；注意沙箱与审计 |
+| **进阶② 评测+复盘** | 指标表、归因、Leaderboard | **高** — 依赖 `action_log` + Bot 批跑；可选 ClickHouse/ES 后置 |
+| **进阶③ 自进化** | 对局→分析→优化→再对局 | **中** — 离线 Job + 人工审核 Prompt 变更；禁止在线直改 SM 状态 |
 
 *文档结束*
