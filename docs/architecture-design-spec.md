@@ -2,9 +2,9 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.1 |
+| 版本 | v1.2 |
 | 日期 | 2026-05-15 |
-| 状态 | 与 [PRD v1.0.1](requirements-mvp-v0.1.md) 及 [技术选型 v0.1.3](tech-selection-feasibility.md) **对齐** |
+| 状态 | 与 [PRD v1.0.3](requirements-mvp-v0.1.md) 及 [技术选型](tech-selection-feasibility.md) **对齐** |
 | 适用范围 | MVP 后端（12 人局、单实例、无消息队列） |
 | 课题 | **AI 狼人杀 — Agent Team 实战**（多智能体协作/对抗 + 对局引擎 + 可观测） |
 
@@ -294,6 +294,7 @@ flowchart TB
 
 - **信息隔离**：`GameView` 构造器按当前 `phase` 与 `playerId` 裁剪字段，与 Gateway 定向推送规则同源。
 - **协作/对抗**：狼人刀口在 `NIGHT_WOLF` 阶段内收集；胜负仅 `WinChecker` 输出。
+- **商议门闩（R17a）**：SM 维护 `wolfChatInPhase`；`KILL` 指向存活狼人前须本阶段已有 `WOLF_CHAT` / `scope=WEREWOLF` 消息，否则 `WOLF_CHAT_REQUIRED`（见 PRD §4.3.6）。
 
 ---
 
@@ -404,6 +405,7 @@ flowchart TB
 |------|------|------|
 | v1.0 | 2026-05-15 | 初稿：MVP 架构设计说明书，与 PRD v1.0.0 及技术选型文档对齐 |
 | v1.1 | 2026-05-15 | **课题对齐**：§2.3 能力分层、§8.4 Agent Team 拓扑、观战上下文图、§9.3 进阶预留、可观测与非目标更新 |
+| v1.2 | 2026-05-15 | **R17a**：§8.4 狼队商议门闩与 PRD v1.0.3 对齐 |
 
 ---
 

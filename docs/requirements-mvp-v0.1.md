@@ -1,8 +1,8 @@
-# 狼人杀后端系统需求文档（MVP v1.0.1）
+# 狼人杀后端系统需求文档（MVP v1.0.3）
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.0.1（规则/协议 **v1.0.0 仍冻结**；本章新增课题对齐说明） |
+| 版本 | v1.0.3（**R17** 含服务端商议门闩；其余规则/协议 **v1.0.0 仍冻结**） |
 | 日期 | 2026-05-15 |
 | 范围 | 后端核心系统；**观战 UI 为课题加分项**，规格见 §1.5 |
 | 项目名 | werewolf-engine |
@@ -49,7 +49,8 @@
 
 - WebSocket / HTTP 消息 `type` 与 `payload` 字段
 - `GamePhase` 枚举全集
-- 角色技能结算顺序与第 3 章规则表（已确认项）
+- 角色技能结算顺序与第 3 章规则表（已确认项；**R17/R17a** 以 **v1.0.3** 为准）
+- `PHASE_SYNC` 在 **v1.0.3** 新增 `wolfChatInPhase`（仅 `NIGHT_WOLF`）；其余字段仍以 v1.0.0 为准
 - AI 输出 JSON Schema（第 4.5 节）
 
 ### 0.4 术语表
@@ -251,7 +252,8 @@
 | R14 | 白天投票 | **`can_vote=true` 的存活玩家**可投任意存活玩家或弃票；**平票无人出局**，进入下一夜 | 已冻结 |
 | R15 | 投票超时 | 视为 **弃票** | 已冻结 |
 | R16 | 警长 | **不进 MVP** | 已冻结 |
-| R17 | 狼人刀口目标 | **自刀**：**允许**，`target` 可为**本人**（须为存活狼人），可用于骗女巫解药等策略。**刀存活狼队友**：**拒绝**，返回 `INVALID_TARGET` | 已冻结 |
+| R17 | 狼人刀口目标（含自刀战术） | **`NIGHT_WOLF` 内**须先通过 `WOLF_CHAT`（R11）商议刀口策略。**允许**的 `KILL` 目标：① 任意**存活非狼**（**无需**先商议）；② **存活狼人**（含狼队友或**本人**，自刀战术）：**须满足 R17a**。最终刀口按 **R10** 票型决议。**禁止**：`target` 已死亡；非 `NIGHT_WOLF` 的 `KILL` | 已冻结 |
+| R17a | 刀狼队友 / 自刀的门闩 | 当 `KILL` 的 `target` 为**存活狼人**时，**当前 `NIGHT_WOLF` 阶段实例**内须已有 ≥1 条合法狼队频道消息（`CHAT_MESSAGE` 且 `scope=WEREWOLF`，或 `GAME_ACTION` 且 `action=WOLF_CHAT`），由**任意存活狼人**发出；否则拒绝 `KILL`，返回 **`WOLF_CHAT_REQUIRED`**。进入新的 `NIGHT_WOLF` 时重置门闩（见 §4.3.6） | 已冻结 |
 | R18 | 死人发言 / 投票 | **拒绝**（`is_alive=false`）；已翻牌白痴见 R19，仍可发言、不可投票 | 已冻结 |
 | R19 | 白痴被白天投票出局 | **翻牌公布身份**，不离场；`is_alive=true`；`can_vote=false`；**仍可发言**；广播 `GAME_EVENT`=`IDIOT_REVEALED` | 已冻结 |
 | R20 | 白痴被狼刀 / 女巫毒 | **正常死亡**，`is_alive=false`；猎人毒杀同 R8 | 已冻结 |
@@ -262,7 +264,7 @@
 
 | 角色 | 技能 | 阶段 | 说明 |
 |------|------|------|------|
-| 狼人 | 刀人 | `NIGHT_WOLF` | 见 R10、**R17**（可自刀；不可刀存活队友） |
+| 狼人 | 刀人 | `NIGHT_WOLF` | 见 R10、**R17/R17a**（刀非狼直接投；刀狼须本阶段先 `WOLF_CHAT`） |
 | 女巫 | 解药 | `NIGHT_WITCH` | 救当晚刀口；已用则不可再救 |
 | 女巫 | 毒药 | `NIGHT_WITCH` | 毒任意存活玩家；与解药同夜不可并用（R4） |
 | 预言家 | 查验 | `NIGHT_SEER` | 每晚必查 1 人，结果仅预言家可见 |
@@ -434,7 +436,7 @@ GAME_OVER
 |-------|----------|-------------|----------|---------|----------|
 | `WAITING` | 房主 start | — | 全员 | — | — |
 | `ROLE_ASSIGN` | 系统 | — | 全员（仅己角色私密字段） | 5 | 随机分配 4狼4民1白痴1预1女1猎 |
-| `NIGHT_WOLF` | 存活狼人 | `KILL`, `WOLF_CHAT` | 狼人频道 + 各狼 `canAct` | 30 | 随机刀**存活非狼**（不含自刀；若需自刀须狼队主动提交，见 R17） |
+| `NIGHT_WOLF` | 存活狼人 | `KILL`, `WOLF_CHAT` | 狼人频道 + 各狼 `canAct` | 30 | 无有效票型时随机刀**存活非狼**；自刀战术须狼队主动投票（见 R17、R10） |
 | `NIGHT_WITCH` | 女巫 | `SAVE`, `POISON`, `SKIP` | 仅女巫 | 30 | `SKIP` |
 | `NIGHT_SEER` | 预言家 | `CHECK` | 仅预言家 | 20 | 随机未查存活 |
 | `HUNTER_SHOOT` | 死亡猎人 | `SHOOT`, `SKIP` | 仅猎人 | 20 | `SKIP` |
@@ -450,13 +452,32 @@ GAME_OVER
 - 同一 `roomId` + 同一 `phase` 内，对 `GameStateMachine` 的写操作 **串行化**（单线程队列或房间锁）
 - 狼人 `KILL`：先收集，阶段结束或超时后一次性结算（R10）
 
+#### 4.3.6 狼队商议门闩（R17a 实现）
+
+| 项 | 说明 |
+|----|------|
+| 状态字段 | 房间局内维护 `wolfChatInPhase`（boolean），建议置于 SM 内存；可选镜像 Redis `werewolf:game:{roomId}:wolf_chat_in_phase` |
+| 置 `true` | 本阶段内收到合法狼队消息：`CHAT_MESSAGE` + `scope=WEREWOLF`，或 `GAME_ACTION` + `action=WOLF_CHAT`（发送者须为存活狼人） |
+| 重置 `false` | 每次**进入** `NIGHT_WOLF`（含每一夜）时 |
+| 校验时机 | `handleAction` 处理 `KILL` 且 `target` 角色为狼人时，若 `wolfChatInPhase==false` → `WOLF_CHAT_REQUIRED` |
+| `PHASE_SYNC` | `NIGHT_WOLF` 可选字段 `wolfChatInPhase`（boolean），便于 Bot/UI 提示「须先商议」 |
+
+**自刀战术示例（服务端强制顺序）**
+
+```text
+1. 狼 A：WOLF_CHAT「今晚刀我骗药」     → wolfChatInPhase=true
+2. 狼 B：KILL target=A                 → ACTION_ACK success（记录票，待 R10 结算）
+3. 若跳过步骤 1 直接步骤 2           → WOLF_CHAT_REQUIRED
+```
+
 #### 4.3.5 handleAction 校验顺序
 
 1. `room.status == PLAYING`
 2. `payload.phase` 与服务器当前 `phase` 一致（**已冻结**：**以服务端 `phase` 为准**；客户端传入 `phase` 仅作校验辅助，不一致则 `INVALID_PHASE`）
 3. 发送者 `playerId` 存活且角色有权执行该 `action`
-4. `target` 在合法集合内（例：`NIGHT_WOLF` + `KILL` 时，`target` 须为存活玩家，且为**本人（自刀）**或**非狼**；**不得**为存活狼队友，见 R17）
-5. 执行并返回 `ACTION_ACK`；必要时触发 `PHASE_SYNC` / `GAME_EVENT`
+4. `target` 在合法集合内（例：`NIGHT_WOLF` + `KILL` 时，`target` 须为**存活玩家**；已死亡则 `INVALID_TARGET`）
+5. **R17a**：`NIGHT_WOLF` + `KILL` 且 `target` 为**存活狼人**时，须 `wolfChatInPhase==true`，否则 `WOLF_CHAT_REQUIRED`
+6. 执行并返回 `ACTION_ACK`；必要时触发 `PHASE_SYNC` / `GAME_EVENT`；合法狼队聊天置 `wolfChatInPhase=true`
 
 ### 4.4 角色技能结算模块（A）
 
@@ -584,7 +605,7 @@ GAME_OVER
 |------|----------|
 | **一座位一 Agent 实例** | 逻辑上每个 `playerId`（AI 座位）独立 `AIService` 调用上下文，禁止多座位共享同一局内 Memory |
 | **可见即所得** | Agent 的 `Context` / Tools **仅注入**该座位在当阶段合法可见的信息（与 `PHASE_SYNC` 定向规则一致） |
-| **对抗与协作** | 狼人：阶段内协商刀口（R10）；好人：独立推理；**阵营胜负不由 Agent 协商，由 SM 裁决** |
+| **对抗与协作** | 狼人：`WOLF_CHAT` 商议 + `KILL` 投票（R11、R10、R17，含自刀战术队友指刀）；好人：独立推理；**阵营胜负不由 Agent 协商，由 SM 裁决** |
 | **行动出口唯一** | Agent 输出 JSON 意图 → SM `handleAction` 校验 → 状态变更；禁止 Agent 直写 DB/WS |
 | **可观测** | `thinking` 写入 `action_log` 或调试日志，**禁止**经 `CHAT_BROADCAST` / `PHASE_SYNC` 泄露给其他玩家 |
 
@@ -688,12 +709,14 @@ ws://{host}:{port}/ws/game?token={token}
     "canVote": true,
     "idiotRevealed": false,
     "witchAntidoteLeft": null,
-    "wolfKillTarget": null
+    "wolfKillTarget": null,
+    "wolfChatInPhase": false
   }
 }
 ```
 
 - 私密字段按角色填充，非本角色为 `null` 或省略
+- `wolfChatInPhase`：仅 `currentPhase==NIGHT_WOLF` 时出现；见 R17a、§4.3.6
 - `canVote`：白痴翻牌后为 `false`，其余存活玩家默认 `true`
 - `idiotRevealed`：仅白痴本人为 `true` 时可知己身份已公开；其他玩家通过 `GAME_EVENT` 获知
 - **白天讨论**（`currentPhase == DAY_DISCUSS`）额外字段（见 R13）：
@@ -737,6 +760,20 @@ ws://{host}:{port}/ws/game?token={token}
 
 `playerSubState`：狼人阶段「等待队友」等 UI 提示用，**不改变** `serverPhase`。
 
+`ACTION_ACK` 失败示例（R17a，未先狼队商议即刀狼队友）：
+
+```json
+{
+  "type": "ACTION_ACK",
+  "payload": {
+    "success": false,
+    "code": "WOLF_CHAT_REQUIRED",
+    "message": "刀狼队友或自刀前，须在本夜晚狼人阶段先进行狼队频道商议",
+    "serverPhase": "NIGHT_WOLF"
+  }
+}
+```
+
 `GAME_EVENT` 示例（白痴翻牌）：
 
 ```json
@@ -772,6 +809,7 @@ ws://{host}:{port}/ws/game?token={token}
 | `INVALID_PHASE` | 阶段不匹配 |
 | `INVALID_ACTION` | action 不允许 |
 | `INVALID_TARGET` | 目标非法 |
+| `WOLF_CHAT_REQUIRED` | `NIGHT_WOLF` 刀存活狼人（含自刀）前，本阶段尚未有狼队频道商议（R17a） |
 | `NOT_YOUR_TURN` | 非当前发言/行动者 |
 | `NOT_IN_ROOM` | 未加入房间 |
 | `ROOM_FULL` | 房间已满 |
@@ -835,6 +873,7 @@ ws://{host}:{port}/ws/game?token={token}
 | `werewolf:room:{roomId}:alive` | Set | 对局结束 | 存活 playerId |
 | `werewolf:game:{roomId}:phase` | String | 对局结束 | 当前 phase |
 | `werewolf:game:{roomId}:state` | String | 对局结束 | 状态机 JSON 快照 |
+| `werewolf:game:{roomId}:wolf_chat_in_phase` | String `0`/`1` | 当前 `NIGHT_WOLF` 结束 | 本阶段是否已有狼队商议（R17a）；进入 `NIGHT_WOLF` 时写 `0` |
 
 #### 4.7.3 操作日志（action_log）与可观测性
 
@@ -1178,6 +1217,8 @@ com.werewolfengine
 | v0.1.4 | 2026-05-15 | 运行时升级为 **Java 21**；开启 Spring **虚拟线程**；明确阶段推进不得忙等空转 |
 | v1.0.0 | 2026-05-15 | **PRD 全面冻结**（无开放待定项）；评审清单与 0.5 技术栈、11.2 P6 对齐；签字表默认版本 v1.0.0 |
 | v1.0.1 | 2026-05-15 | **课题对齐**：§1.0/§1.5 Agent Team 与能力分层、§4.5.8 信息隔离、§4.7.3 可观测、场景 S2b、加分观战 UI；**不改变** v1.0.0 已冻结协议/规则 |
+| v1.0.2 | 2026-05-15 | **R17 修订**：自刀战术允许狼队 `WOLF_CHAT` 商议后，**其他狼人** `KILL` 可指向狼队友 A（不限于 A 自指）；校验与 §4.3.3/§3.3 同步 |
+| v1.0.3 | 2026-05-15 | **R17a**：服务端强制「刀存活狼人前本 `NIGHT_WOLF` 须先有狼队频道消息」；§4.3.6、`WOLF_CHAT_REQUIRED`、`PHASE_SYNC.wolfChatInPhase`、Redis 门闩键 |
 
 ---
 
@@ -1195,7 +1236,8 @@ com.werewolfengine
 | R8-R9 | 猎人开枪 | [ ] | |
 | R10 | 狼刀协商 | [ ] | |
 | R13 | 发言顺序/时间锚/随机方向 | [ ] | |
-| R17 | 自刀 / 禁刀队友 | [ ] | |
+| R17 | 自刀战术 / 队友指刀 | [ ] | |
+| R17a | 刀狼前狼队频道门闩 / `WOLF_CHAT_REQUIRED` | [ ] | |
 | R14-R15 | 投票 / 平票 / 超时弃票 | [ ] | |
 | R16 | 无警长 | [ ] | |
 | R19-R22 | 白痴规则 | [ ] | |

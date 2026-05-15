@@ -2,9 +2,9 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v0.1.3 |
+| 版本 | v0.1.4 |
 | 日期 | 2026-05-15 |
-| 关联文档 | [requirements-mvp-v0.1.md](./requirements-mvp-v0.1.md)（v1.0.1 课题对齐）、[architecture-design-spec.md](./architecture-design-spec.md) |
+| 关联文档 | [requirements-mvp-v0.1.md](./requirements-mvp-v0.1.md)（**v1.0.3**，含 R17a）、[architecture-design-spec.md](./architecture-design-spec.md) |
 | 项目 | werewolf-engine（**Agent Team 实战** — 12 人预女猎白 + 白痴，人机混排 MVP） |
 
 ---
@@ -194,7 +194,7 @@ flowchart TB
 | 房间 + HTTP + JWT/Token 占位 | 低 | 标准 Spring Web |
 | WS 广播与按角色定向推 | 中 | 需设计 `roomId` 与 `playerId` 到 Session 的映射；无理论障碍 |
 | 完整状态机 + 白痴翻牌 + 屠边 | 中～高 | **最大开发量**在 A；[PRD v1.0.0](requirements-mvp-v0.1.md) 规则已冻结，按章实现即可 |
-| 狼人自刀 + 女巫结算顺序 | 中 | 规则清晰后实现为确定性代码 |
+| 狼人自刀战术（队友指刀 + 商议门闩 R17a）+ 女巫结算 | 中 | PRD **v1.0.3**：刀狼前须本阶段 `WOLF_CHAT`；否则 `WOLF_CHAT_REQUIRED`；按 R10 决议 |
 | LangChain4j 驱动 AI 座位 | 中 | 与状态机通过「意图 → 校验 → 提交」边界清晰即可 |
 | 10 房 × 12 人并发 | 低（单实例） | 非功能指标在 PRD 已列；单机足够 |
 
@@ -283,6 +283,7 @@ flowchart TB
 | v0.1.1 | 2026-05-15 | 采用 **Java 21** + Spring **虚拟线程**说明与风险；T2 关闭 |
 | v0.1.2 | 2026-05-15 | 与 **PRD v1.0.0** 冻结对齐：WebSocket/Redis/Bot/开放决策收口；去除文档内 `[TBD]`；风险表改写 |
 | v0.1.3 | 2026-05-15 | **课题对齐**：结论摘要、§2 约束、架构图观战 UI；与 PRD v1.0.1 §1.0/§1.5 一致 |
+| v0.1.4 | 2026-05-15 | **R17a** 服务端门闩可行性；与 PRD v1.0.3 同步 |
 
 ---
 
