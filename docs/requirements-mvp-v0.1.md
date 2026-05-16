@@ -160,7 +160,7 @@
 | 角色 | 需求摘要 | 后端能力 |
 |------|----------|----------|
 | 真人玩家 | 知悉当前阶段、操作有反馈 | `PHASE_SYNC`、`ACTION_ACK`、WS 定向推送 |
-| AI 玩家 | 推理、记忆、伪装、按格式行动 | LangChain4j + Tools + Memory + Persona |
+| AI 玩家 | 推理、记忆、伪装、按格式行动；**出局后**仍收合法 `PHASE_SYNC`、不产出可改局技能（见 §4.3.7） | LangChain4j + Tools + Memory + Persona |
 | 系统法官 | 自动推进、超时、公布结果 | `GameStateMachine` + 定时器 + `GAME_EVENT` 广播 |
 | **观战者（加分）** | 观看多 Agent 实时博弈、不解密未授权信息 | 前端只读客户端；服务端仍按角色过滤 `PHASE_SYNC`（观战账号策略 **P2 定义**） |
 
@@ -1235,6 +1235,7 @@ com.werewolfengine
 | v1.0.2 | 2026-05-15 | **R17 修订**：自刀战术允许狼队 `WOLF_CHAT` 商议后，**其他狼人** `KILL` 可指向狼队友 A（不限于 A 自指）；校验与 §4.3.3/§3.3 同步 |
 | v1.0.3 | 2026-05-15 | **R17a**：服务端强制「刀存活狼人前本 `NIGHT_WOLF` 须先有狼队频道消息」；§4.3.6、`WOLF_CHAT_REQUIRED`、`PHASE_SYNC.wolfChatInPhase`、Redis 门闩键 |
 | v1.0.4 | 2026-05-16 | **LLM**：dev/prod 统一 **DeepSeek 官方 API**（`deepseek-v4-flash`）；移除 Ollama / 百炼 qwen-plus；§0.5、§4.5.6、§8.3 |
+| v1.0.5 | 2026-05-16 | **阶段位与死亡/AI**：新增 §4.3.7（`NIGHT_WITCH`/`NIGHT_SEER` 不省略、倒计时跑满、死后可见不可动）；修订 §4.3.3 表、§4.3.5 第 3 条、§4.5.8、§2.1.4 行为表。**不改变** v1.0.0 已冻结的胜负规则与消息 type 全集 |
 
 ---
 
