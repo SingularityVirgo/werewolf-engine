@@ -15,6 +15,7 @@ alwaysApply: true
 - [docs/architecture-design-spec.md](docs/architecture-design-spec.md) — 架构、Agent Team、可观测
 - [docs/tech-selection-feasibility.md](docs/tech-selection-feasibility.md) — 技术选型与可行性
 - [docs/developer-local-setup.md](docs/developer-local-setup.md) — 本地环境（含 `DEEPSEEK_API_KEY` 等）
+- [docs/project-progress-report.md](docs/project-progress-report.md) — **实现进度与待办**（已完成 / 未完成对照 PRD P0）
 
 ## 课题与范围
 
