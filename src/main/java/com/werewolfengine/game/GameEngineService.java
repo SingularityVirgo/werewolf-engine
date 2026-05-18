@@ -37,6 +37,22 @@ public class GameEngineService {
         return room;
     }
 
+    public GameRoomState createRoom(String roomId) {
+        if (roomId == null || roomId.isBlank()) {
+            roomId = "r_" + UUID.randomUUID().toString().substring(0, 8);
+        }
+        return stateMachine.createRoom(roomId);
+    }
+
+    public GameRoomState getRoomState(String roomId) {
+        return stateMachine.getRoom(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("Room not found: " + roomId));
+    }
+
+    public PhaseSyncPayload buildPhaseSync(String roomId, int playerId) {
+        return stateMachine.buildPhaseSync(roomId, playerId);
+    }
+
     public GameStateMachine.StartGameResult startGame(String roomId) {
         return stateMachine.startGame(roomId);
     }
