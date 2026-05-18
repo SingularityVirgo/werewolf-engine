@@ -66,4 +66,20 @@ public final class PerceptionLogEvents {
                 null
         );
     }
+
+    public static void hunterShot(ActionLogService log, GameRoomState room, int hunterSeat, Integer target) {
+        if (log == null || room == null) {
+            return;
+        }
+        String message = target != null
+                ? "HUNTER_SHOT seat=" + hunterSeat + " target=" + target
+                : "HUNTER_SHOT seat=" + hunterSeat + " skipped";
+        log.recordSystemEvent(
+                room.getRoomId(),
+                room.getRound(),
+                GamePhase.HUNTER_SHOOT,
+                message,
+                target
+        );
+    }
 }
