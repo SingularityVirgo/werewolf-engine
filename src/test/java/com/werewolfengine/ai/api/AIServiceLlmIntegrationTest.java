@@ -15,7 +15,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Live DeepSeek call â€?skipped when {@code DEEPSEEK_API_KEY} is unset.
+ * Live DeepSeek call; skipped when {@code DEEPSEEK_API_KEY} is unset.
  */
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude="

@@ -4,6 +4,8 @@ import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.sync.PhaseSyncBuilder;
 import com.werewolfengine.game.win.GameOutcome;
 import com.werewolfengine.game.death.DeathBus;
+import com.werewolfengine.game.observability.ActionLogService;
+import com.werewolfengine.game.observability.PerceptionLogEvents;
 import com.werewolfengine.game.lastwords.LastWordsFlow;
 import com.werewolfengine.game.death.DeathCause;
 import com.werewolfengine.game.death.DeathRecord;
@@ -25,14 +27,20 @@ import java.util.List;
 public final class HunterShootFlow {
 
     private final DeathBus deathBus;
+    private final ActionLogService actionLog;
     private final LastWordsFlow lastWordsFlow = new LastWordsFlow();
 
     public HunterShootFlow() {
-        this(new DeathBus());
+        this(new DeathBus(), null);
     }
 
     public HunterShootFlow(DeathBus deathBus) {
+        this(deathBus, null);
+    }
+
+    public HunterShootFlow(DeathBus deathBus, ActionLogService actionLog) {
         this.deathBus = deathBus;
+        this.actionLog = actionLog;
     }
 
     public GameStateMachine.HandleActionResult advanceNightDeathAnnounce(
@@ -133,6 +141,7 @@ public final class HunterShootFlow {
             Runnable enterDayDiscuss,
             java.util.function.Function<GameRoomState, GameStateMachine.HandleActionResult> continueAfterVote
     ) {
+        PerceptionLogEvents.hunterShot(actionLog, room, hunterSeat, null);
         room.setHunterShooterSeat(null);
         var ended = deathBus.apply(room, List.of(new DeathRecord(hunterSeat, DeathCause.HUNTER_SHOOT)));
         if (ended.gameEnded()) {
@@ -157,6 +166,7 @@ public final class HunterShootFlow {
         if (tgt == null || !tgt.isAlive()) {
             return fail(room, ActionErrorCode.INVALID_TARGET, "目标必须存活");
         }
+        PerceptionLogEvents.hunterShot(actionLog, room, hunterSeat, target);
         room.setHunterShooterSeat(null);
         List<DeathRecord> records = new ArrayList<>();
         records.add(new DeathRecord(target, DeathCause.HUNTER_SHOOT));
