@@ -8,15 +8,16 @@
 **PRD版本**：v1.0.11  
 **提交日期**：2026-05-18
 
-## ✅ 验收清单（PRD §8.2 Day4联调）
+## 验收清单（PRD §8.2 Day4 — Formal 路径 B）
 
-所有验收点已完成：
+> **状态（2026-05-18）**：Formal WS 联调**未通过**；整局可用 **路径 A**（`auto_play_client.py` → `/internal/game`）。  
+> 字段对照与报告模板见 [docs/reference/bot-load-test.md](../docs/reference/bot-load-test.md)。
 
-- ✅ Bot能WS连接并收到 `CONNECTED`
-- ✅ `JOIN_ROOM` 后收到 `PHASE_SYNC`，且 `playerId` 正确
-- ✅ 房主 `start` 后阶段进入 `NIGHT_WOLF`（或经 `ROLE_ASSIGN`）
-- ✅ Bot发送 `GAME_ACTION` 收到 `ACTION_ACK`（success或明确ERROR）
-- ✅ 12 Bot同房间消息不串房
+- [ ] Bot 能 WS 连接并收到 `CONNECTED`（载荷与 PRD 对齐待 B）
+- [ ] `JOIN_ROOM` 后收到 `PHASE_SYNC`，且 `playerId` 正确（需 B 主动推送 + C 发 `seatId`）
+- [ ] 房主 `start` 后阶段进入 `NIGHT_WOLF`（或 `ROLE_ASSIGN`）
+- [ ] Bot 发送 `GAME_ACTION` 收到 `ACTION_ACK`
+- [ ] 12 Bot 同房不串房
 
 ## 🏗️ 技术栈
 
@@ -49,7 +50,7 @@ pip install -r requirements.txt
 
 ### 2. 配置服务器地址（可选）
 
-默认连接 `localhost:8090`，可通过环境变量覆盖：
+默认连接 `localhost:8090`（与后端默认 `8080` 不一致，联调时请改环境变量）：
 
 ```bash
 # Windows PowerShell
@@ -199,7 +200,8 @@ currentSpeakerId, seerCheckAlignment, seerCheckTarget
 
 ## 📚 相关文档
 
-- **PRD**: `../docs/requirements-mvp-v0.1.md` (v1.0.11)
+- **PRD**: `../docs/progress/requirements-mvp-v0.1.md`
+- **联调 / 压测**: `../docs/reference/gateway-integration.md`、`../docs/reference/bot-load-test.md`
 - **技术选型**: `../docs/tech-selection-feasibility.md`
 - **架构设计**: `../docs/architecture-design-spec.md`
 

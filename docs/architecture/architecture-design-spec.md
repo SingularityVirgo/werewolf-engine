@@ -2,9 +2,9 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.4 |
-| 日期 | 2026-05-16 |
-| 状态 | 与 [PRD v1.0.11](../progress/requirements-mvp-v0.1.md)（§4.3.8 引擎窄版）及 [技术选型 v0.1.5](tech-selection-feasibility.md) **对齐** |
+| 版本 | v1.5 |
+| 日期 | 2026-05-18 |
+| 状态 | 与 [PRD v1.0.14](../progress/requirements-mvp-v0.1.md) 及 [技术选型 v0.1.5](tech-selection-feasibility.md) **对齐** |
 | 适用范围 | MVP 后端（12 人局、单实例、无消息队列） |
 | 课题 | **AI 狼人杀 — Agent Team 实战**（多智能体协作/对抗 + 对局引擎 + 可观测） |
 
@@ -32,6 +32,8 @@
 | [requirements-mvp-v0.1.md](../progress/requirements-mvp-v0.1.md) | **需求与协议真源**；§4.3.8 引擎窄版实现契约 |
 | [adr/001](../adr/001-night-skill-pipeline.md) · [adr/002](../adr/002-death-bus-and-hunter-flow.md) | 夜内管道、`DeathBus`、`HunterShootFlow` |
 | [adr/003](../adr/003-ai-integration.md) · [adr/004](../adr/004-ai-seat-memory.md) | AI 接入、Memory、`GameView` |
+| [adr/005](../adr/005-gateway-push-and-phase-timer.md) | Gateway 推送、阶段定时 |
+| [gateway-room-modules](../reference/gateway-room-modules.md) · [gateway-integration](../reference/gateway-integration.md) | B 侧实现与双路径联调 |
 | [tech-selection-feasibility.md](tech-selection-feasibility.md) | **技术栈与可行性**；本文落实为组件与部署视图 |
 
 ---
@@ -213,7 +215,8 @@ sequenceDiagram
 
 - **房间隔离**：任何推送键必须包含 `roomId`，禁止跨房间广播。
 - **角色隔离**：`NIGHT_WOLF` / `NIGHT_WITCH` / `NIGHT_SEER` 等阶段按 PRD §4.6.5 过滤接收者集合。
-- **实现提示**：`ConnectionManager` 维护 `(roomId, playerId) → WebSocketSession`；Router 查 SM 当前阶段与可见性后调用 `session.sendMessage`。
+- **实现提示**：`ConnectionManager` 维护 `(roomId, playerId) → WebSocketSession`；经 `GameEngineService.buildPhaseSync` 裁剪后推送（**已冻结**：[ADR-005](../adr/005-gateway-push-and-phase-timer.md)）。
+- **细节与差距**：见 [gateway-room-modules §3](../reference/gateway-room-modules.md)；当前代码为请求-响应拉取，主动推送待实现。
 
 ---
 
@@ -480,6 +483,8 @@ flowchart TB
 | v1.1 | 2026-05-15 | **课题对齐**：§2.3 能力分层、§8.4 Agent Team 拓扑、观战上下文图、§9.3 进阶预留、可观测与非目标更新 |
 | v1.2 | 2026-05-15 | **R17a**：§8.4 狼队商议门闩与 PRD v1.0.3 对齐 |
 | v1.3 | 2026-05-16 | LLM 改为 DeepSeek 官方 API；§4.1、§10.2 与 PRD v1.0.4 对齐（后续 PRD 子版本见 requirements-mvp 变更记录） |
+| v1.4 | 2026-05-16 | 引擎窄版 §4.3.8、DeathBus（见 PRD v1.0.11） |
+| v1.5 | 2026-05-18 | §5.3 链 ADR-005 与 gateway-room-modules；追溯 gateway 参考文档 |
 
 ---
 

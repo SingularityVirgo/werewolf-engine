@@ -1,15 +1,28 @@
 # werewolf-engine 文档索引
 
-**入口页。** 文档按职能分子目录；ADR 保持独立四篇。
+**入口页。** 文档按职能分子目录；ADR 保持独立多篇。
 
 | 类别 | 文档 | 说明 |
 |------|------|------|
 | **需求** | [progress/requirements-mvp-v0.1.md](progress/requirements-mvp-v0.1.md) | 规则、协议、验收（**唯一基线**） |
 | **架构** | [architecture/architecture-design-spec.md](architecture/architecture-design-spec.md) · [architecture/tech-selection-feasibility.md](architecture/tech-selection-feasibility.md) | 系统架构、技术选型 |
-| **ADR** | [adr/001](adr/001-night-skill-pipeline.md) · [002](adr/002-death-bus-and-hunter-flow.md) · [003](adr/003-ai-integration.md) · [004](adr/004-ai-seat-memory.md) | 设计决策（夜内/死亡/AI/Memory） |
-| **参考** | [reference/code-modules.md](reference/code-modules.md) · [reference/gateway-integration.md](reference/gateway-integration.md) | 包结构、Gateway/Bot 联调 |
+| **ADR** | [adr/001](adr/001-night-skill-pipeline.md) · [002](adr/002-death-bus-and-hunter-flow.md) · [003](adr/003-ai-integration.md) · [004](adr/004-ai-seat-memory.md) · **[005](adr/005-gateway-push-and-phase-timer.md)** | 夜内/死亡/AI/Memory/**Gateway 推送** |
+| **参考** | 见下表 | 包结构、联调、鉴权、持久化、测试 |
 | **进度** | [progress/status.md](progress/status.md) | 实现状态与待办 |
+| **联调执行** | [gateway-room-ws-checklist.md](gateway-room-ws-checklist.md) | B 侧勾选清单（非架构真源） |
 | **本地环境** | [developer-local-setup.md](developer-local-setup.md) | JDK、Docker、API Key |
+
+### 参考文档（reference/）
+
+| 文档 | 读者 | 说明 |
+|------|------|------|
+| [code-modules.md](reference/code-modules.md) | 全员 | `game` / `ai` / `gateway` / `room` / `message` 速查 |
+| [gateway-room-modules.md](reference/gateway-room-modules.md) | B、C | Gateway/Room 实现架构与 PRD 注记 |
+| [gateway-integration.md](reference/gateway-integration.md) | B、C、A | 双路径联调（Internal vs Formal） |
+| [auth-session.md](reference/auth-session.md) | B | token、重连 |
+| [persistence-rollout.md](reference/persistence-rollout.md) | A、B | MySQL/Redis 分阶段落地 |
+| [testing-strategy.md](reference/testing-strategy.md) | 全员 | 单测 / 集成 / Day4 / 压测 |
+| [bot-load-test.md](reference/bot-load-test.md) | C | Bot 字段对照、报告模板 |
 
 ## 谁读什么
 
@@ -17,7 +30,7 @@
 |------|------|
 | 新人 | 本页 → PRD §0～2 → 架构 §1～3 → [code-modules](reference/code-modules.md) |
 | A（game/ai） | PRD §3～4.5 → ADR 001～004 → [status](progress/status.md) |
-| B（gateway） | PRD §4.2、§4.6～4.7 → [gateway-integration](reference/gateway-integration.md) → ADR-003 §7 |
-| C（bot） | [gateway-integration](reference/gateway-integration.md) → [bot/README](../bot/README.md) |
+| B（gateway） | PRD §4.2、§4.6～4.7 → [gateway-room-modules](reference/gateway-room-modules.md) → [ADR-005](adr/005-gateway-push-and-phase-timer.md) → [checklist](gateway-room-ws-checklist.md) |
+| C（bot） | [gateway-integration](reference/gateway-integration.md) → [bot-load-test](reference/bot-load-test.md) → [bot/README](../bot/README.md) |
 
 Cursor 规则：[werewolf-engine-context.mdc](../.cursor/rules/werewolf-engine-context.mdc)

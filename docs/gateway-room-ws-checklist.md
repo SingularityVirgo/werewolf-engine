@@ -5,7 +5,9 @@
 | 版本 | v0.1 |
 | 日期 | 2026-05-18 |
 | 适用范围 | B 侧联调层：`gateway` / `room` / WebSocket / Redis 映射 |
-| 关联文档 | [requirements-mvp-v0.1.md](requirements-mvp-v0.1.md)、[architecture-design-spec.md](architecture-design-spec.md)、[developer-local-setup.md](developer-local-setup.md) |
+| 关联文档 | [requirements-mvp-v0.1.md](progress/requirements-mvp-v0.1.md)、[gateway-room-modules](reference/gateway-room-modules.md)、[ADR-005](adr/005-gateway-push-and-phase-timer.md)、[developer-local-setup.md](developer-local-setup.md) |
+
+> **定位**：本页为 B 侧**执行勾选清单**；架构决策以 [ADR-005](adr/005-gateway-push-and-phase-timer.md) 与 [gateway-room-modules](reference/gateway-room-modules.md) 为准。
 
 ---
 

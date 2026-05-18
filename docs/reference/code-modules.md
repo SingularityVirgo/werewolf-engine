@@ -1,6 +1,8 @@
-# 代码模块速查（`game` + `ai`）
+# 代码模块速查
 
-包依赖与 PRD §7.2 一致：`game` → `ai`；`ai` 不依赖 `gateway`。
+包依赖与 PRD §7.2 一致：`gateway` → `room` / `game`；`game` → `ai`；`ai` 不依赖 `gateway`。
+
+Gateway/Room 详见 [gateway-room-modules](gateway-room-modules.md)。
 
 ---
 
@@ -77,3 +79,46 @@ GameViews → GameViewContext → 「当前局面」
 Gateway tick → GamePhaseScheduler → AiTurnCoordinator → AIService.decide
   → GameEngineService.submitAction → GameStateMachine
 ```
+
+---
+
+## `com.werewolfengine.gateway`
+
+| 功能 | 类 | 说明 |
+|------|-----|------|
+| WS 入口 | `GameWebSocketHandler` | `CONNECTED`、`JOIN_ROOM`、`READY`；其余交 Router |
+| 路由 | `MessageRouter` | `GAME_ACTION`、`PHASE_SYNC` → `GameEngineService` |
+| 连接表 | `ConnectionManager` | `(roomId, seatId)` ↔ `WebSocketSession`（内存） |
+| 配置 | `WebSocketConfig` | 注册 `/ws/game` |
+
+```text
+GameWebSocketHandler → ConnectionManager | RoomService | MessageRouter
+MessageRouter → GameEngineService
+```
+
+推送目标态见 [ADR-005](../adr/005-gateway-push-and-phase-timer.md)。
+
+---
+
+## `com.werewolfengine.room`
+
+| 功能 | 类 | 说明 |
+|------|-----|------|
+| HTTP | `RoomController` | `/api/room` CRUD |
+| 服务 | `RoomService` | 建房、join、ready；`start` → `GameEngineService` |
+
+```text
+RoomController → RoomService → GameEngineService
+```
+
+---
+
+## `com.werewolfengine.message`
+
+| 功能 | 类 | 说明 |
+|------|-----|------|
+| 类型 | `MessageType` | WS `type` 枚举，对齐 PRD |
+| 载荷 | `PhaseSyncPayload` | `PHASE_SYNC` 字段 |
+| 载荷 | `ActionAckPayload` | `ACTION_ACK` 字段 |
+
+序列化：Gateway 当前用 `Map` + Jackson；后续可统一为 `message` DTO。

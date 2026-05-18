@@ -15,8 +15,8 @@ alwaysApply: true
 |------|------|
 | 需求 | [progress/requirements-mvp-v0.1.md](docs/progress/requirements-mvp-v0.1.md) |
 | 架构 | [architecture-design-spec](docs/architecture/architecture-design-spec.md) · [tech-selection](docs/architecture/tech-selection-feasibility.md) |
-| ADR | [adr/001](docs/adr/001-night-skill-pipeline.md) · [002](docs/adr/002-death-bus-and-hunter-flow.md) · [003](docs/adr/003-ai-integration.md) · [004](docs/adr/004-ai-seat-memory.md) |
-| 参考 | [reference/code-modules.md](docs/reference/code-modules.md) · [reference/gateway-integration.md](docs/reference/gateway-integration.md) |
+| ADR | [001](docs/adr/001-night-skill-pipeline.md) · [002](docs/adr/002-death-bus-and-hunter-flow.md) · [003](docs/adr/003-ai-integration.md) · [004](docs/adr/004-ai-seat-memory.md) · **[005](docs/adr/005-gateway-push-and-phase-timer.md)** |
+| 参考 | [code-modules](docs/reference/code-modules.md) · [gateway-room-modules](docs/reference/gateway-room-modules.md) · [gateway-integration](docs/reference/gateway-integration.md) · [testing-strategy](docs/reference/testing-strategy.md) |
 | 进度 | [progress/status.md](docs/progress/status.md) |
 | 本地 | [developer-local-setup.md](docs/developer-local-setup.md) |
 
@@ -46,8 +46,10 @@ alwaysApply: true
 ## 实现边界
 
 - 包结构见 [code-modules](docs/reference/code-modules.md)
-- **AI Memory（M3）**：[ADR-004](docs/adr/004-ai-seat-memory.md)；代码待实现
+- **Gateway 推送**：[ADR-005](docs/adr/005-gateway-push-and-phase-timer.md)；Formal 联调见 [gateway-integration](docs/reference/gateway-integration.md)（路径 A internal ≠ 路径 B WS）
+- **AI Memory（M3）**：[ADR-004](docs/adr/004-ai-seat-memory.md)；已实现
 
 ## 协作约定
 
-- 改契约前先对照 PRD 冻结项；提交遵循 [Conventional Commits](.cursor/rules/conventional-commits.mdc)
+- 改契约前先对照 PRD 冻结项；实现与 PRD 差异写在 [gateway-room-modules](docs/reference/gateway-room-modules.md)「实现注记」
+- 提交遵循 [Conventional Commits](.cursor/rules/conventional-commits.mdc)
