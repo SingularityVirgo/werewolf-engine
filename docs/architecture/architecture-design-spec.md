@@ -64,6 +64,7 @@
 | **进阶①** | `ai` 配置外置（Agent 描述文件） | SM 接口不变 |
 | **进阶②** | 评测服务 + 存储（可新模块 `eval`） | 读 `game_record`，不写局内热路径 |
 | **进阶③** | 离线 `optimizer` Job | 写回 Prompt/权重，不绕过 SM |
+| **进阶④** | Agent 自进化闭环 | 按座位读取本局发言与行动复盘，生成候选 Prompt 版本，审核后发布 |
 
 ---
 
@@ -366,6 +367,34 @@ flowchart TB
 | ① 通用 Agent | `ai` 包内 Prompt/Tools 读配置目录 | 否 |
 | ② 评测+复盘 | `game_record.action_log` + 可选 `eval` 模块 | 仅日志字段 |
 | ③ 自进化 | 离线任务写配置；运行时只读 | 否 |
+| ④ Agent 自进化闭环 | `prompt_version` + `prompt_delta` + 审核后发布 | 否 |
+
+### 9.4 Agent 自进化架构
+
+Agent 自进化不在运行时修改状态，而是走离线闭环：
+
+```text
+game_record / action_log / thinking
+  -> seat-level review job
+  -> prompt suggestion generator
+  -> human or rule review
+  -> prompt version publish
+  -> next game reads latest approved version
+```
+
+#### 9.4.1 输入与输出
+
+| 项 | 说明 |
+|----|------|
+| 输入 | `roomId`、`seatId`、`role`、`action_log`、`thinking`、发言文本、最终胜负 |
+| 输出 | `promptVersion`、`promptDelta`、`reviewNotes`、`approved`、`publishedAt` |
+
+#### 9.4.2 运行约束
+
+- 运行时只读已发布 Prompt，不能在局内自修改。
+- 分析必须按 **座位级** 保存，不允许把多座位复盘混成一条 prompt 建议。
+- 优化结果必须可回放、可审计、可回滚。
+- 不得把未授权的私密信息写进 Prompt 版本。
 
 ---
 
