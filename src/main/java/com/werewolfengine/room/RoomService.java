@@ -1,14 +1,13 @@
 package com.werewolfengine.room;
 
-import com.werewolfengine.game.GameEngineService;
+import com.werewolfengine.game.engine.GameEngineService;
+import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.model.GamePhase;
 import com.werewolfengine.game.model.PlayerState;
 import com.werewolfengine.game.model.RoomStatus;
-import com.werewolfengine.game.GameStateMachine;
 import com.werewolfengine.game.model.GameRoomState;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
