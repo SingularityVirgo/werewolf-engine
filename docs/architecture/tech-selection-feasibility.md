@@ -4,7 +4,7 @@
 |------|-----|
 | 版本 | v0.1.5 |
 | 日期 | 2026-05-15 |
-| 关联文档 | [requirements-mvp-v0.1.md](./requirements-mvp-v0.1.md)（**v1.0.5**，含 §4.3.7 阶段位/死亡与 AI、R17a / DeepSeek LLM）、[architecture-design-spec.md](./architecture-design-spec.md)、[**开发者本地环境说明**](developer-local-setup.md) |
+| 关联文档 | [PRD](../progress/requirements-mvp-v0.1.md)（**v1.0.5**，含 §4.3.7、R17a / DeepSeek）、[architecture-design-spec.md](./architecture-design-spec.md)、[developer-local-setup.md](../developer-local-setup.md) |
 | 项目 | werewolf-engine（**Agent Team 实战** — 12 人预女猎愚 + 愚者，人机混排 MVP） |
 
 ---
@@ -13,7 +13,7 @@
 
 ### 1.1 目的
 
-在 [PRD](./requirements-mvp-v0.1.md) 已定义功能边界的前提下，说明 **为何选用当前技术栈**、**各选项取舍**、**在三人团队与 MVP 周期内是否可落地**，以及 **主要风险与前置条件**。
+在 [PRD](../progress/requirements-mvp-v0.1.md) 已定义功能边界的前提下，说明 **为何选用当前技术栈**、**各选项取舍**、**在三人团队与 MVP 周期内是否可落地**，以及 **主要风险与前置条件**。
 
 ### 1.2 结论摘要（可直接给决策方）
 
@@ -126,7 +126,7 @@ flowchart TB
 
 | 选项 | 优点 | 缺点 | 结论 |
 |------|------|------|------|
-| **Spring WebSocket（原生 WebSocketHandler）** | 与 Spring 一体化；与 [PRD 0.5](requirements-mvp-v0.1.md) **已冻结**一致 | MVP 不用 STOMP | **采用** |
+| **Spring WebSocket（原生 WebSocketHandler）** | 与 Spring 一体化；与 [PRD 0.5](../progress/requirements-mvp-v0.1.md) **已冻结**一致 | MVP 不用 STOMP | **采用** |
 | 裸 Netty | 性能上限高、控制细 | 重复造会话与路由；与 Spring 集成成本高 | MVP 不推荐 |
 | SSE + HTTP | 实现简单 | **单向**；狼人私聊与多路向推送别扭 | 不推荐 |
 
@@ -194,7 +194,7 @@ flowchart TB
 |--------|------|------|
 | 房间 + HTTP + JWT/Token 占位 | 低 | 标准 Spring Web |
 | WS 广播与按角色定向推 | 中 | 需设计 `roomId` 与 `playerId` 到 Session 的映射；无理论障碍 |
-| 完整状态机 + 愚者翻牌 + 屠边 | 中～高 | **最大开发量**在 A；[PRD v1.0.0](requirements-mvp-v0.1.md) 规则已冻结，按章实现即可 |
+| 完整状态机 + 愚者翻牌 + 屠边 | 中～高 | **最大开发量**在 A；[PRD v1.0.0](../progress/requirements-mvp-v0.1.md) 规则已冻结，按章实现即可 |
 | 狼人自刀战术（队友指刀 + 商议门闩 R17a）+ 女巫结算 | 中 | PRD **v1.0.3**：刀狼前须本阶段 `WOLF_CHAT`；否则 `WOLF_CHAT_REQUIRED`；按 R10 决议 |
 | LangChain4j 驱动 AI 座位 | 中 | 与状态机通过「意图 → 校验 → 提交」边界清晰即可 |
 | 10 房 × 12 人并发 | 低（单实例） | 非功能指标在 PRD 已列；单机足够 |
@@ -241,7 +241,7 @@ flowchart TB
 
 | 风险 | 影响 | 缓解 |
 |------|------|------|
-| 需求变更未走版本与评审 | 返工、联调延期 | 变更须 bump [PRD](requirements-mvp-v0.1.md) 子版本并经三人确认（见 PRD 0.1 / 0.3） |
+| 需求变更未走版本与评审 | 返工、联调延期 | 变更须 bump [PRD](../progress/requirements-mvp-v0.1.md) 子版本并经三人确认（见 PRD 0.1 / 0.3） |
 | LLM JSON 不稳定 | 阶段卡住 | Schema 约束 + 解析失败走 fallback + 缩短单次调用链 |
 | Spring Boot 3 / 4 混用文档 | 配置踩坑 | 团队统一版本并写一页「启动检查表」 |
 | 状态机与 WS 耦合 | 难测 | Gateway 只转发；状态机纯 Java 单测覆盖边界 |
@@ -250,7 +250,7 @@ flowchart TB
 
 ## 7. 已关闭决策（与 PRD v1.0.0 一致）
 
-以下与 [PRD 0.5 节](requirements-mvp-v0.1.md#05-技术栈约定) 对齐，**不再开放二选一**：
+以下与 [PRD 0.5 节](../progress/requirements-mvp-v0.1.md#05-技术栈约定) 对齐，**不再开放二选一**：
 
 | ID | 议题 | 结论（与 PRD v1.0.0 对齐） |
 |----|------|---------------------------|
@@ -291,7 +291,7 @@ flowchart TB
 
 ## 10. 课题能力分层与进阶可行性（摘要）
 
-与 [PRD §1.0 / §1.5](./requirements-mvp-v0.1.md#10-课题定位与能力分层) 一致：
+与 [PRD §1.0 / §1.5](../progress/requirements-mvp-v0.1.md#10-课题定位与能力分层) 一致：
 
 | 分层 | 内容 | 技术可行性 |
 |------|------|------------|

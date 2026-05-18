@@ -4,7 +4,7 @@
 |------|-----|
 | 版本 | v1.4 |
 | 日期 | 2026-05-16 |
-| 状态 | 与 [PRD v1.0.11](requirements-mvp-v0.1.md)（§4.3.8 引擎窄版）及 [技术选型 v0.1.5](tech-selection-feasibility.md) **对齐** |
+| 状态 | 与 [PRD v1.0.11](../progress/requirements-mvp-v0.1.md)（§4.3.8 引擎窄版）及 [技术选型 v0.1.5](tech-selection-feasibility.md) **对齐** |
 | 适用范围 | MVP 后端（12 人局、单实例、无消息队列） |
 | 课题 | **AI 狼人杀 — Agent Team 实战**（多智能体协作/对抗 + 对局引擎 + 可观测） |
 
@@ -28,9 +28,10 @@
 
 | 文档 | 关系 |
 |------|------|
-| [requirements-mvp-v0.1.md](requirements-mvp-v0.1.md) | **需求与协议真源**；§4.3.8 引擎窄版实现契约 |
-| [adr/001-night-skill-pipeline.md](adr/001-night-skill-pipeline.md) | 夜内 `NightSkillPipeline` + Wolf/Seer/Witch handlers |
-| [adr/002-death-bus-and-hunter-flow.md](adr/002-death-bus-and-hunter-flow.md) | 同步 `DeathBus` + `HunterShootFlow` |
+| [README.md](../README.md) | 文档总索引 |
+| [requirements-mvp-v0.1.md](../progress/requirements-mvp-v0.1.md) | **需求与协议真源**；§4.3.8 引擎窄版实现契约 |
+| [adr/001](../adr/001-night-skill-pipeline.md) · [adr/002](../adr/002-death-bus-and-hunter-flow.md) | 夜内管道、`DeathBus`、`HunterShootFlow` |
+| [adr/003](../adr/003-ai-integration.md) · [adr/004](../adr/004-ai-seat-memory.md) | AI 接入、Memory、`GameView` |
 | [tech-selection-feasibility.md](tech-selection-feasibility.md) | **技术栈与可行性**；本文落实为组件与部署视图 |
 
 ---
@@ -234,7 +235,7 @@ sequenceDiagram
 
 ### 6.3 与 LangChain4j 相关的数据
 
-- **ChatMemory**：进程内或按 `roomId+playerId` 存 Redis `[实现选型]`；MVP 可先内存，单实例可接受。
+- **Agent Memory（已选型，[ADR-004](../adr/004-ai-seat-memory.md)）**：不以 LangChain4j `ChatMemoryStore` 为主存储。Episodic Memory 由 **`action_log` 按座投影**（`SeatMemoryProjector`），decide 时拼入 Prompt；可选进程内 `roomId:playerId` 投影缓存。多实例时 Redis **非 MVP**。
 - **向量 / RAG**：非 MVP 必选项；若后续引入，独立评估 `EmbeddingStore`，不反向污染核心状态机表结构。
 
 ---
