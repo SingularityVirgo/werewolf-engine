@@ -1,5 +1,6 @@
 package com.werewolfengine.game;
 
+import com.werewolfengine.game.chat.ChatMessageService;
 import com.werewolfengine.game.engine.GameEngineService;
 import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.model.GamePhase;
@@ -54,7 +55,8 @@ class MockAIFullGameTest {
                 h.aiService(),
                 h.mockGameRunner(),
                 actionLog,
-                h.phaseScheduler()
+                h.phaseScheduler(),
+                new ChatMessageService()
         );
         String roomId = "mock_facade";
         engine.createDevRoom(roomId);

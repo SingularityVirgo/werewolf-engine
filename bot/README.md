@@ -10,14 +10,22 @@
 
 ## 验收清单（PRD §8.2 Day4 — Formal 路径 B）
 
-> **状态（2026-05-18）**：Formal WS 联调**未通过**；整局可用 **路径 A**（`auto_play_client.py` → `/internal/game`）。  
-> 字段对照与报告模板见 [docs/reference/bot-load-test.md](../docs/reference/bot-load-test.md)。
+> **状态（2026-05-25）**：Formal 路径 B 推送/tick 已实现；跑 **Day4** 见下方命令。  
+> 字段对照见 [docs/reference/bot-load-test.md](../docs/reference/bot-load-test.md)。
 
-- [ ] Bot 能 WS 连接并收到 `CONNECTED`（载荷与 PRD 对齐待 B）
-- [ ] `JOIN_ROOM` 后收到 `PHASE_SYNC`，且 `playerId` 正确（需 B 主动推送 + C 发 `seatId`）
-- [ ] 房主 `start` 后阶段进入 `NIGHT_WOLF`（或 `ROLE_ASSIGN`）
-- [ ] Bot 发送 `GAME_ACTION` 收到 `ACTION_ACK`
-- [ ] 12 Bot 同房不串房
+```bash
+cd bot
+pip install -r requirements.txt
+# 另开终端启动后端后：
+python run_day4_formal.py
+python run_day4_formal.py --parallel-rooms
+```
+
+- [x] Bot 能 WS 连接并收到 `CONNECTED`
+- [x] `JOIN_ROOM` 后收到 `PHASE_SYNC`（`seatId` 定向）
+- [x] 房主 `start` 后阶段进入 `NIGHT_WOLF`（或 `ROLE_ASSIGN`）
+- [x] 狼座 `GAME_ACTION` → `ACTION_ACK`（脚本自动找狼座）
+- [x] 12 Bot 同房（`--parallel-rooms` 双房隔离）
 
 ## 🏗️ 技术栈
 
@@ -50,12 +58,12 @@ pip install -r requirements.txt
 
 ### 2. 配置服务器地址（可选）
 
-默认连接 `localhost:8090`（与后端默认 `8080` 不一致，联调时请改环境变量）：
+默认连接 `localhost:8080`（可用环境变量覆盖）：
 
 ```bash
 # Windows PowerShell
-$env:WEREWOLF_BASE_URL="http://192.168.1.100:8090"
-$env:WEREWOLF_WS_URL="ws://192.168.1.100:8090"
+$env:WEREWOLF_BASE_URL="http://127.0.0.1:8080"
+$env:WEREWOLF_WS_URL="ws://127.0.0.1:8080"
 
 # Linux/Mac
 export WEREWOLF_BASE_URL="http://192.168.1.100:8090"

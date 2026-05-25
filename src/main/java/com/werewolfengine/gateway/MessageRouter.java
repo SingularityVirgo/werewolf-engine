@@ -15,9 +15,17 @@ import java.util.Map;
 public class MessageRouter {
 
     private final GameEngineService gameEngine;
+    private final RoomExecutionGuard roomGuard;
+    private final WsPushService wsPushService;
 
-    public MessageRouter(GameEngineService gameEngine) {
+    public MessageRouter(
+            GameEngineService gameEngine,
+            RoomExecutionGuard roomGuard,
+            WsPushService wsPushService
+    ) {
         this.gameEngine = gameEngine;
+        this.roomGuard = roomGuard;
+        this.wsPushService = wsPushService;
     }
 
     public Map<String, Object> handle(String roomId, String type, Map<String, Object> payload) {
@@ -30,6 +38,7 @@ public class MessageRouter {
         return switch (messageType) {
             case CONNECTED -> envelope(messageType.name(), Map.of("roomId", roomId));
             case GAME_ACTION -> handleGameAction(roomId, payload);
+            case CHAT_MESSAGE -> handleChatMessage(roomId, payload);
             case PHASE_SYNC -> handlePhaseSync(roomId, payload);
             default -> envelope(MessageType.ERROR.name(), Map.of("message", "unsupported message: " + type));
         };
@@ -44,14 +53,36 @@ public class MessageRouter {
                 payload.get("phase") == null ? null : com.werewolfengine.game.model.GamePhase.valueOf(String.valueOf(payload.get("phase"))),
                 payload.get("content") == null ? null : String.valueOf(payload.get("content"))
         );
-        GameEngineService.ActionResult result = gameEngine.submitAction(roomId, command);
+        GameEngineService.ActionResult result = roomGuard.execute(
+                roomId,
+                () -> gameEngine.submitAction(roomId, command)
+        );
+        if (!result.phaseSyncs().isEmpty()) {
+            wsPushService.pushPhaseSyncToConnected(roomId);
+        }
+        wsPushService.flushOutbound(roomId);
         return envelope(MessageType.ACTION_ACK.name(), ackPayload(roomId, playerId, result.ack(), result.phaseSyncs()));
+    }
+
+    private Map<String, Object> handleChatMessage(String roomId, Map<String, Object> payload) {
+        int playerId = ((Number) payload.get("playerId")).intValue();
+        String scope = String.valueOf(payload.get("scope"));
+        String content = payload.get("content") == null ? null : String.valueOf(payload.get("content"));
+        var result = roomGuard.execute(
+                roomId,
+                () -> gameEngine.submitChatMessage(roomId, playerId, scope, content)
+        );
+        if (!result.phaseSyncs().isEmpty()) {
+            wsPushService.pushPhaseSyncToConnected(roomId);
+        }
+        wsPushService.flushOutbound(roomId);
+        return envelope(MessageType.ACTION_ACK.name(), Map.of("ack", result.ack()));
     }
 
     private Map<String, Object> handlePhaseSync(String roomId, Map<String, Object> payload) {
         int seatId = ((Number) payload.get("seatId")).intValue();
         PhaseSyncPayload sync = gameEngine.buildPhaseSync(roomId, seatId);
-        return envelope(MessageType.PHASE_SYNC.name(), phasePayload(seatId, sync));
+        return envelope(MessageType.PHASE_SYNC.name(), WsPushService.phasePayload(seatId, sync));
     }
 
     private Map<String, Object> ackPayload(String roomId, int actorSeatId, ActionAckPayload ack, List<PhaseSyncPayload> phaseSyncs) {
@@ -59,12 +90,8 @@ public class MessageRouter {
         body.put("ack", ack);
         body.put("phaseSyncs", phaseSyncs);
         body.put("actorSeatId", actorSeatId);
-        body.put("actorPhaseSync", phasePayload(actorSeatId, gameEngine.buildPhaseSync(roomId, actorSeatId)));
+        body.put("actorPhaseSync", WsPushService.phasePayload(actorSeatId, gameEngine.buildPhaseSync(roomId, actorSeatId)));
         return body;
-    }
-
-    private static Map<String, Object> phasePayload(int seatId, PhaseSyncPayload sync) {
-        return Map.of("seatId", seatId, "phaseSync", sync);
     }
 
     private static Map<String, Object> envelope(String type, Map<String, Object> payload) {

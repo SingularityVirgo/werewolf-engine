@@ -89,6 +89,13 @@ public class GameStateMachine {
         return Optional.ofNullable(rooms.get(roomId));
     }
 
+    /** Removes in-memory room after lobby dissolve (Formal path B). */
+    public boolean removeRoom(String roomId) {
+        Object lock = roomLocks.remove(roomId);
+        GameRoomState removed = rooms.remove(roomId);
+        return removed != null || lock != null;
+    }
+
     public void markAllReady(String roomId) {
         withRoom(roomId, room -> {
             if (room.getStatus() != RoomStatus.WAITING) {
@@ -182,6 +189,13 @@ public class GameStateMachine {
     /**
      * ?????????{@link #advanceDayAnnounce} ? phase ????
      */
+    /**
+     * Night phases with no living role actor: advance on phase timeout (PRD §4.3.7).
+     */
+    public boolean applyTimedNightFallback(String roomId) {
+        return withRoom(roomId, room -> nightPipeline.nightActions().applyTimedNoActorFallback(room).isPresent());
+    }
+
     public HandleActionResult advanceDayAnnounce(String roomId) {
         return withRoom(roomId, room -> {
             if (room.getStatus() != RoomStatus.PLAYING) {
@@ -265,8 +279,18 @@ public class GameStateMachine {
         }
         return switch (command.action()) {
             case SPEAK, SKIP_SPEAK -> {
+                if (command.action() == GameActionType.SPEAK) {
+                    String content = command.content();
+                    if (content != null && !content.isBlank()) {
+                        com.werewolfengine.game.event.OutboundMessage.enqueueChat(
+                                room, "ALL", actor.getPlayerId(), content.trim());
+                    }
+                }
                 room.setDiscussIndex(idx + 1);
-                ActionAck ack = ActionAck.ok("?????", room.getPhase(), null);
+                if (room.getDiscussIndex() < order.size()) {
+                    room.onActTurnAdvanced();
+                }
+                ActionAck ack = ActionAck.ok("发言已记录", room.getPhase(), null);
                 if (room.getDiscussIndex() >= order.size()) {
                     room.getDayVotes().clear();
                     room.setPhase(GamePhase.DAY_VOTE);

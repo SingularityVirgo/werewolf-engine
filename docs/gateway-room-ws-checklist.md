@@ -5,9 +5,9 @@
 | 版本 | v0.1 |
 | 日期 | 2026-05-18 |
 | 适用范围 | B 侧联调层：`gateway` / `room` / WebSocket / Redis 映射 |
-| 关联文档 | [requirements-mvp-v0.1.md](progress/requirements-mvp-v0.1.md)、[gateway-room-modules](reference/gateway-room-modules.md)、[ADR-005](adr/005-gateway-push-and-phase-timer.md)、[developer-local-setup.md](developer-local-setup.md) |
+| 关联文档 | [status](progress/status.md)、[ADR-005](adr/005-gateway-formal-path.md)、[gateway-room-modules](reference/gateway-room-modules.md)、[developer-local-setup](developer-local-setup.md) |
 
-> **定位**：本页为 B 侧**执行勾选清单**；架构决策以 [ADR-005](adr/005-gateway-push-and-phase-timer.md) 与 [gateway-room-modules](reference/gateway-room-modules.md) 为准。
+> **定位**：本页为 B 侧**执行勾选清单**；架构与实现以 [ADR-005](adr/005-gateway-formal-path.md) 为准；进度以 [status](progress/status.md) 为准。
 
 ---
 
@@ -19,8 +19,8 @@
 |------|------|------|
 | `game` 状态机 | **基本完成** | 夜晚/白天流转、胜负裁决、`PHASE_SYNC` 构造都已具备 |
 | `ai` 骨架 | **基本完成** | `AIService`、`MockAIPlayer`、Prompt/Parse/Guard 分层已存在 |
-| `gateway` 正式层 | **部分完成** | 已有 `/ws/game`、`GameWebSocketHandler`、连接表、消息路由；定向推送、重连、鉴权待补 |
-| `room` 正式层 | **部分完成** | 已有 HTTP 建房 / join / ready / start / snapshot；解散、房主、完整席位分配待补 |
+| `gateway` 正式层 | **P0 完成** | 推送、`phase-tick`、房间锁、定时 tick；鉴权/Redis/重连待 P2 |
+| `room` 正式层 | **P0 完成** | HTTP 建房 / join / ready / start / snapshot / phase-tick；自动分座、`aiCount` 待做 |
 | 临时联调用桥 | **已存在** | `InternalGameController` 作为 Week1 临时 HTTP bridge |
 | Redis 会话映射 | **未开始** | 还没形成 `roomId + playerId -> sessionId` 的正式闭环 |
 | Bot 直连联调 | **未完成** | 需要等正式 WS 协议和网关路由落地 |
@@ -61,7 +61,7 @@ Client / Bot
 | G-02 | `WebSocketConfigurer` 注册 | 暴露 `/ws/game` 或约定路径 | 已完成 |
 | G-03 | 连接管理器 | 维护 `sessionId`、`roomId`、`playerId`、心跳状态 | 部分完成：已有内存映射，心跳待补 |
 | G-04 | 消息路由器 | 按 `type` 分发到 room / game / chat 逻辑 | 部分完成：已接 game/phase，chat 待补 |
-| G-05 | 定向推送 | 按 `roomId` / `playerId` 发送 `PHASE_SYNC`、`ACTION_ACK`、`GAME_EVENT` | 部分完成：响应已带接收者 seat，主动广播待补 |
+| G-05 | 定向推送 | 按座发送 `PHASE_SYNC`（MVP 推全连接座） | **已完成**（`WsPushService`，见 ADR-005 §11） |
 | G-06 | 鉴权接入 | 读取 token 并绑定 user / seat | 未开始 |
 | G-07 | 断线重连 | 30s 窗口内恢复同一座位连接 | 未开始 |
 

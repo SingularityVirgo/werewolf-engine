@@ -63,7 +63,7 @@ public final class PhaseSyncBuilder {
         return new PhaseSyncPayload(
                 phase,
                 room.getRound(),
-                defaultCountdown(phase),
+                PhaseCountdown.remainingSeconds(room),
                 room.alivePlayerIds(),
                 yourRole,
                 yourTeammates(room, viewer),
@@ -80,21 +80,6 @@ public final class PhaseSyncBuilder {
                 seerAlign,
                 seerTarget
         );
-    }
-
-    private static Integer defaultCountdown(GamePhase phase) {
-        return switch (phase) {
-            case NIGHT_WOLF -> 30;
-            case NIGHT_WITCH -> 30;
-            case NIGHT_SEER -> 20;
-            case ROLE_ASSIGN -> 5;
-            case NIGHT_START, NIGHT_DEATH_ANNOUNCE, EXILE_DEATH_ANNOUNCE, VOTE_RESULT -> 5;
-            case LAST_WORDS -> 30;
-            case DAY_DISCUSS -> 60;
-            case DAY_VOTE -> 30;
-            case HUNTER_SHOOT -> 20;
-            default -> null;
-        };
     }
 
     private static Boolean idiotRevealedForViewer(PlayerState viewer) {

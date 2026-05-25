@@ -9,5 +9,6 @@ public enum MessageType {
     CHAT_BROADCAST,
     GAME_OVER,
     ERROR,
-    GAME_ACTION
+    GAME_ACTION,
+    CHAT_MESSAGE
 }

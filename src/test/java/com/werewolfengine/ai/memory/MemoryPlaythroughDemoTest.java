@@ -7,8 +7,11 @@ import com.werewolfengine.game.model.GamePhase;
 import com.werewolfengine.game.model.GameRoomState;
 import com.werewolfengine.game.model.Role;
 import com.werewolfengine.game.observability.ActionLogService;
+import com.werewolfengine.ai.policy.MockAIPlayer;
 import com.werewolfengine.game.orchestration.AiTurnCoordinator;
+import com.werewolfengine.game.orchestration.GamePhaseScheduler;
 import com.werewolfengine.game.orchestration.MockGameRunner;
+import com.werewolfengine.game.orchestration.PhaseTimeoutHandler;
 import com.werewolfengine.game.orchestration.TurnActorResolver;
 import com.werewolfengine.game.view.SeatPerceptionProjector;
 import com.werewolfengine.game.view.SeatPerceptionSlice;
@@ -64,7 +67,13 @@ class MemoryPlaythroughDemoTest {
                 aiService,
                 actionLog
         );
-        MockGameRunner runner = new MockGameRunner(stateMachine, coordinator);
+        GamePhaseScheduler phaseScheduler = new GamePhaseScheduler(
+                stateMachine,
+                coordinator,
+                new PhaseTimeoutHandler(stateMachine, new TurnActorResolver(), new MockAIPlayer(), actionLog),
+                actionLog
+        );
+        MockGameRunner runner = new MockGameRunner(stateMachine, phaseScheduler);
 
         System.out.println("\n========== Memory playthrough demo ==========");
         System.out.println("roomId=" + roomId);

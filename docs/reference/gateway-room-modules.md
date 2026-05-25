@@ -2,11 +2,11 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v0.1 |
-| 日期 | 2026-05-18 |
+| 版本 | v0.2 |
+| 日期 | 2026-05-25 |
 | 读者 | B（gateway/room）、C（Bot）、A（对接 SM） |
 | 需求真源 | [PRD §4.2、§4.6、§6](../progress/requirements-mvp-v0.1.md) |
-| 决策真源 | [ADR-005](../adr/005-gateway-push-and-phase-timer.md) |
+| 决策与实现 | [ADR-005](../adr/005-gateway-formal-path.md) |
 | 执行清单 | [gateway-room-ws-checklist](../gateway-room-ws-checklist.md) |
 
 本文描述 **实现架构** 与 **PRD 差异注记**；对外字段冻结以 PRD 为准，不得在未走变更流程时把本文当新契约。
@@ -108,14 +108,14 @@ TCP 连接建立
 
 ---
 
-## 3. 推送模型（目标态，ADR-005）
+## 3. 推送模型（ADR-005，P0 已实现）
 
 ### 3.1 两类出站
 
 | 模式 | 用途 | 现状 |
 |------|------|------|
 | **拉取** | 客户端发 `PHASE_SYNC` + `seatId` | ✅ 已实现 |
-| **推送** | 阶段切换、他人动作后刷新 | ❌ 未实现 |
+| **推送** | 阶段切换、他人动作后刷新 | ✅ P0（见 [ADR-005](../adr/005-gateway-formal-path.md) §11；MVP 推全连接座） |
 
 ### 3.2 必须推送的时机（目标）
 
@@ -155,24 +155,38 @@ TCP 连接建立
 | 对局阶段 | `GamePhase` | `PHASE_SYNC.currentPhase` |
 | 座位 | `playerId` = 1～12 | HTTP 当前返回字段名 `seatId`，语义同 `playerId` |
 
-### 4.1 HTTP 建房（差距）
+### 4.1 HTTP 建房（2026-05-25）
 
-| PRD | 当前 |
-|-----|------|
-| `POST /api/room` body `{ "aiCount": 11 }` | 仅可选 `roomId`；**忽略** `aiCount` |
-| 响应含 `maxPlayers`、`hostId` | 返回 `roomId`、`status`、`phase`、`round` |
+| 字段 | 说明 |
+|------|------|
+| `roomId` | 可选；省略则服务端生成 |
+| `aiCount` | 0～12；预留末 `aiCount` 个座位给 AI（座位 `12-aiCount+1`～`12`） |
+| `hostUserId` | 可选；仅 `start` / `DELETE` 鉴权用（MVP 无 JWT，可配合 `X-User-Id`） |
+| 响应 | `maxPlayers`、`aiCount`、`hostUserId`、`seats[]`、`readyCount`、`humanCount` |
 
-### 4.2 入座
+### 4.2 入座 / 离开
 
-| PRD | 当前 |
-|-----|------|
-| join 自动分配 `playerId` | **必须**指定 `seatId` + `userId` |
-| 响应 `playerId` | 响应 `seatId` |
+| 接口 | 行为 |
+|------|------|
+| `POST .../join` | `seatId` **可选**（省略则自动分配首个可入座）；`userId` 必填；响应含 `playerId`（= `seatId`） |
+| `POST .../leave` | 仅 `WAITING`；释放座位并解绑 WS |
+| `DELETE ...` | 仅 `WAITING` + 房主；停止 tick、清理连接与内存房间 |
 
 ### 4.3 开始
 
 - `POST /api/room/{roomId}/start` → `GameEngineService.startGame`。
 - 成功：`success: true`、`phase`、`phaseSyncs`（HTTP 响应内，**未**经 WS 推送）。
+- 同时：`RoomPhaseTickScheduler.start` + 首包 WS `PHASE_SYNC`（若已连接）。
+
+### 4.4 `PHASE_SYNC.countdown`（P-05，2026-05-25）
+
+| 项 | 说明 |
+|----|------|
+| 实现类 | `PhaseCountdown`、`PhaseTimeoutHandler`、`GamePhaseScheduler`、`PhaseSyncBuilder` |
+| 行为 | 进入 `GamePhase` 或讨论/遗言下一发言人时重置 deadline；`remainingSeconds` 写入 `countdown` |
+| `phase-tick` 响应 | 未到期：`status=COUNTDOWN`；到期：超时兜底或 `AI_STEP` / `ADVANCED` / `GAME_OVER` |
+| 正式使用 | 依赖自动调度 + WS；**不**要求客户端高频 HTTP tick |
+| 联调 | `scripts/countdown-observe.py`；`formal-path-smoke` 末项在 countdown 下可能失败，见 [gateway-integration §6](gateway-integration.md) |
 
 ---
 
@@ -220,3 +234,6 @@ TCP 连接建立
 | 版本 | 日期 | 说明 |
 |------|------|------|
 | v0.1 | 2026-05-18 | 初稿：组件、生命周期、推送目标态、PRD 实现注记 |
+| v0.2 | 2026-05-25 | 推送 P0 已实现；链 ADR-005 合并篇与 status |
+| v0.3 | 2026-05-25 | §4.4 P-05 countdown 实现注记 |
+| v0.4 | 2026-05-25 | §4.1～4.2：`aiCount`、自动分座、快照、`leave`、`DELETE` 解散 |

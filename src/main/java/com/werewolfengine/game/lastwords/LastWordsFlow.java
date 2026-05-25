@@ -71,7 +71,17 @@ public final class LastWordsFlow {
         }
         return switch (command.action()) {
             case SPEAK, SKIP_SPEAK -> {
+                if (command.action() == GameActionType.SPEAK) {
+                    String content = command.content();
+                    if (content != null && !content.isBlank()) {
+                        com.werewolfengine.game.event.OutboundMessage.enqueueChat(
+                                room, "ALL", command.playerId(), content.trim());
+                    }
+                }
                 room.setLastWordsIndex(idx + 1);
+                if (room.getLastWordsIndex() < order.size()) {
+                    room.onActTurnAdvanced();
+                }
                 ActionAck ack = ActionAck.ok("遗言已记录", room.getPhase(), null);
                 if (room.getLastWordsIndex() >= order.size()) {
                     room.clearLastWords();

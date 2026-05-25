@@ -6,11 +6,9 @@ import com.werewolfengine.room.RoomService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.util.Map;
 
 @Component
@@ -19,17 +17,28 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final MessageRouter router;
     private final RoomService roomService;
-    private final ConnectionManager connectionManager = new ConnectionManager();
+    private final ConnectionManager connectionManager;
+    private final WsPushService wsPushService;
+    private final RoomPhaseTickScheduler phaseTickScheduler;
 
-    public GameWebSocketHandler(MessageRouter router, RoomService roomService) {
+    public GameWebSocketHandler(
+            MessageRouter router,
+            RoomService roomService,
+            ConnectionManager connectionManager,
+            WsPushService wsPushService,
+            RoomPhaseTickScheduler phaseTickScheduler
+    ) {
         this.router = router;
         this.roomService = roomService;
+        this.connectionManager = connectionManager;
+        this.wsPushService = wsPushService;
+        this.phaseTickScheduler = phaseTickScheduler;
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         connectionManager.register(session);
-        send(session, Map.of(
+        wsPushService.sendEnvelope(session, Map.of(
                 "type", "CONNECTED",
                 "payload", Map.of("sessionId", session.getId())
         ));
@@ -44,19 +53,23 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             String roomId = payload != null && payload.get("roomId") != null ? String.valueOf(payload.get("roomId")) : null;
             if ("JOIN_ROOM".equals(type) && roomId != null) {
                 Integer seatId = payload.get("seatId") == null ? null : ((Number) payload.get("seatId")).intValue();
-                if (seatId == null) {
-                    sendError(session, "seatId required");
-                    return;
-                }
-                connectionManager.bind(session.getId(), roomId, seatId);
                 Long userId = payload.get("userId") == null ? null : ((Number) payload.get("userId")).longValue();
-                if (userId != null) {
-                    roomService.joinRoom(roomId, seatId, userId);
+                try {
+                    RoomService.SeatSnapshot joined = roomService.joinRoom(roomId, seatId, userId);
+                    int boundSeat = joined.seatId();
+                    connectionManager.bind(session.getId(), roomId, boundSeat);
+                    wsPushService.sendEnvelope(session, Map.of(
+                            "type", "JOIN_ROOM",
+                            "payload", Map.of(
+                                    "roomId", roomId,
+                                    "seatId", boundSeat,
+                                    "playerId", boundSeat
+                            )
+                    ));
+                    wsPushService.pushPhaseSync(roomId, boundSeat);
+                } catch (IllegalArgumentException | IllegalStateException e) {
+                    sendError(session, e.getMessage());
                 }
-                send(session, Map.of(
-                        "type", "JOIN_ROOM",
-                        "payload", Map.of("roomId", roomId, "seatId", seatId)
-                ));
                 return;
             }
             if ("READY".equals(type) && roomId != null) {
@@ -67,7 +80,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 }
                 boolean ready = payload.get("ready") == null || Boolean.parseBoolean(String.valueOf(payload.get("ready")));
                 RoomService.SeatSnapshot seat = roomService.setReady(roomId, seatId, ready);
-                send(session, Map.of(
+                wsPushService.sendEnvelope(session, Map.of(
                         "type", "READY",
                         "payload", Map.of(
                                 "roomId", seat.roomId(),
@@ -78,12 +91,23 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 ));
                 return;
             }
+            if ("PHASE_TICK".equals(type)) {
+                if (roomId == null) {
+                    sendError(session, "roomId required");
+                    return;
+                }
+                wsPushService.sendEnvelope(session, Map.of(
+                        "type", "PHASE_TICK",
+                        "payload", phaseTickScheduler.tickOnceResponse(roomId)
+                ));
+                return;
+            }
             if (roomId == null) {
                 sendError(session, "roomId required");
                 return;
             }
             Map<String, Object> response = router.handle(roomId, type, payload == null ? Map.of() : payload);
-            send(session, response);
+            wsPushService.sendEnvelope(session, response);
         } catch (Exception e) {
             sendError(session, e.getMessage() == null ? "gateway error" : e.getMessage());
         }
@@ -94,16 +118,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         connectionManager.remove(session.getId());
     }
 
-    private void send(WebSocketSession session, Map<String, Object> payload) {
-        try {
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private void sendError(WebSocketSession session, String message) {
-        send(session, Map.of("type", "ERROR", "payload", Map.of("message", message)));
+        wsPushService.sendEnvelope(session, Map.of("type", "ERROR", "payload", Map.of("message", message)));
     }
 
     @SuppressWarnings("unchecked")

@@ -12,7 +12,9 @@ import com.werewolfengine.game.observability.ActionLogService;
 import com.werewolfengine.game.orchestration.AiTurnCoordinator;
 import com.werewolfengine.game.orchestration.GamePhaseScheduler;
 import com.werewolfengine.game.orchestration.MockGameRunner;
+import com.werewolfengine.game.orchestration.PhaseTimeoutHandler;
 import com.werewolfengine.game.orchestration.TurnActorResolver;
+import com.werewolfengine.game.sync.PhaseCountdown;
 
 /**
  * Wires {@link AiTurnCoordinator} + {@link MockGameRunner} for unit tests without Spring context.
@@ -31,11 +33,23 @@ public final class GameTestAiSupport {
     }
 
     public static Harness mockOnly(GameStateMachine stateMachine, ActionLogService actionLog) {
+        PhaseCountdown.setEnabled(false);
         AIService ai = disabledAiService();
         TurnActorResolver resolver = new TurnActorResolver();
         AiTurnCoordinator coordinator = new AiTurnCoordinator(stateMachine, resolver, ai, actionLog);
-        MockGameRunner runner = new MockGameRunner(stateMachine, coordinator);
-        GamePhaseScheduler scheduler = new GamePhaseScheduler(stateMachine, coordinator, actionLog);
+        PhaseTimeoutHandler timeoutHandler = new PhaseTimeoutHandler(
+                stateMachine,
+                resolver,
+                new MockAIPlayer(),
+                actionLog
+        );
+        GamePhaseScheduler scheduler = new GamePhaseScheduler(
+                stateMachine,
+                coordinator,
+                timeoutHandler,
+                actionLog
+        );
+        MockGameRunner runner = new MockGameRunner(stateMachine, scheduler);
         return new Harness(ai, coordinator, runner, scheduler);
     }
 

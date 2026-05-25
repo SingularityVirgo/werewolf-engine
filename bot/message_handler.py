@@ -39,8 +39,9 @@ def safe_print(*args, **kwargs):
 class MessageHandler:
     """消息处理器 - 负责解析和打印服务端消息"""
 
-    def __init__(self, bot_id: str = "Bot"):
+    def __init__(self, bot_id: str = "Bot", quiet: bool = False):
         self.bot_id = bot_id
+        self.quiet = quiet
         self.message_count = 0
 
     def parse_message(self, raw_message: str) -> Dict[str, Any]:
@@ -116,8 +117,8 @@ class MessageHandler:
         request_id = message.get("requestId")
         server_timestamp = message.get("timestamp")
 
-        # 打印消息（强制显示requestId）
-        self.log_message(msg_type, payload, request_id)
+        if not self.quiet:
+            self.log_message(msg_type, payload, request_id)
 
         # 根据消息类型进行特殊处理（D1-D2阶段主要是打印）
         if msg_type == "CONNECTED":
@@ -126,6 +127,12 @@ class MessageHandler:
             self._handle_phase_sync(payload)
         elif msg_type == "ACTION_ACK":
             self._handle_action_ack(payload)
+        elif msg_type == "GAME_EVENT":
+            self._handle_game_event(payload)
+        elif msg_type == "CHAT_BROADCAST":
+            self._handle_chat_broadcast(payload)
+        elif msg_type == "GAME_OVER":
+            self._handle_game_over(payload)
         elif msg_type == "ERROR":
             self._handle_error(payload)
 
@@ -138,14 +145,16 @@ class MessageHandler:
         safe_print()
 
     def _handle_phase_sync(self, payload: Dict[str, Any]):
-        """处理 PHASE_SYNC 消息 - PRD §4.6.4"""
-        current_phase = payload.get("currentPhase")
-        round_num = payload.get("round")
-        countdown = payload.get("countdown")
-        alive_players = payload.get("alivePlayers", [])
-        your_role = payload.get("yourRole")
+        """处理 PHASE_SYNC — 支持 TargetedPhaseSync { seatId, phaseSync }"""
+        sync = payload.get("phaseSync") or payload
+        seat_id = payload.get("seatId")
+        current_phase = sync.get("currentPhase")
+        round_num = sync.get("round")
+        countdown = sync.get("countdown")
+        alive_players = sync.get("alivePlayers", [])
+        your_role = sync.get("yourRole")
 
-        safe_print(f"  🎮 阶段同步: {current_phase} (第{round_num}轮)")
+        safe_print(f"  🎮 阶段同步 seat={seat_id}: {current_phase} (第{round_num}轮)")
         safe_print(f"     倒计时: {countdown}s | 存活玩家: {alive_players}")
         safe_print(f"     你的角色: {your_role}")
         safe_print()
@@ -162,6 +171,29 @@ class MessageHandler:
         if code:
             safe_print(f"     错误码: {code}")
         safe_print(f"     服务端阶段: {server_phase}")
+        safe_print()
+
+    def _handle_game_event(self, payload: Dict[str, Any]):
+        """处理 GAME_EVENT — PRD §4.6.4"""
+        event_type = payload.get("eventType")
+        data = payload.get("data", {})
+        safe_print(f"  📢 游戏事件: {event_type}")
+        safe_print(f"     数据: {json.dumps(data, ensure_ascii=False)}")
+        safe_print()
+
+    def _handle_chat_broadcast(self, payload: Dict[str, Any]):
+        """处理 CHAT_BROADCAST"""
+        scope = payload.get("scope")
+        player_id = payload.get("playerId")
+        content = payload.get("content")
+        safe_print(f"  💬 聊天[{scope}] {player_id}号: {content}")
+        safe_print()
+
+    def _handle_game_over(self, payload: Dict[str, Any]):
+        """处理 GAME_OVER"""
+        winner = payload.get("winner")
+        safe_print(f"  🏁 对局结束，胜方: {winner}")
+        safe_print(f"     复盘: {json.dumps(payload.get('players', []), ensure_ascii=False)}")
         safe_print()
 
     def _handle_error(self, payload: Dict[str, Any]):

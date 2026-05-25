@@ -1,8 +1,8 @@
-# 狼人杀后端系统需求文档（MVP v1.0.14）
+# 狼人杀后端系统需求文档（MVP v1.0.15）
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.0.14（在 v1.0.13 基础上：**文档索引** [README](../README.md)；目录 `architecture/`、`progress/`、`reference/`；**不改变** 规则与 WS 冻结项） |
+| 版本 | v1.0.15（在 v1.0.14 基础上：新增 **§8.5 实现对照**、文档读序与 [status](../progress/status.md) 同步；**不改变** 规则与 WS 冻结项） |
 | 日期 | 2026-05-16 |
 | 范围 | 后端核心系统；**观战 UI 为课题加分项**，规格见 §1.5 |
 | 项目名 | werewolf-engine |
@@ -77,6 +77,9 @@
 | [adr/003-ai-integration.md](../adr/003-ai-integration.md) · [adr/004-ai-seat-memory.md](../adr/004-ai-seat-memory.md) | AI 接入、座位记忆 |
 | [adr/001-night-skill-pipeline.md](../adr/001-night-skill-pipeline.md) · [adr/002-death-bus-and-hunter-flow.md](../adr/002-death-bus-and-hunter-flow.md) | 夜内管道、死亡总线、猎人 |
 | [gateway-integration.md](../reference/gateway-integration.md) | Gateway / Bot 联调 |
+| [adr/005-gateway-formal-path.md](../adr/005-gateway-formal-path.md) | Gateway 决策与实现（Formal 路径） |
+| [progress/status.md](status.md) | **实现进度**（与 PRD 对照，非冻结） |
+| [adr/README.md](../adr/README.md) | ADR 索引与阅读顺序 |
 | [reference/code-modules.md](../reference/code-modules.md) | 包结构速查 |
 | [tech-selection-feasibility.md](../architecture/tech-selection-feasibility.md) | 技术选型、课题能力可行性、进阶方向评估 |
 
@@ -1359,6 +1362,24 @@ com.werewolfengine
 | GamePhase 枚举 | A 牵头，全员 |
 | AI JSON Schema | A 牵头，全员 |
 
+### 8.5 实现对照（非冻结，2026-05-25）
+
+> 本节描述**当前代码与验收现状**，供联调与评审；**不修改** §0.3 已冻结的协议字段。细节与待办以 [status.md](status.md) 为准；Gateway 设计见 [ADR-005](../adr/005-gateway-formal-path.md)。
+
+| PRD 条目 | 实现状态 | 说明 |
+|----------|----------|------|
+| §8.2 Day4 五项 | **已通过**（2026-05-25） | `bot/run_day4_formal.py` 10/10 |
+| §7.3 B：WS + 建房 + `PHASE_SYNC` | **P0 完成** | 定向推送；MVP 向已连接座广播裁剪 sync |
+| Formal Mock/AI 整局 | **是** | `POST /api/room/.../phase-tick` + `GamePhaseScheduler` |
+| `PHASE_SYNC.countdown` | **已实现**（2026-05-25） | ADR-005 P-05；联调见 [gateway-integration §6](../reference/gateway-integration.md) |
+| `GAME_EVENT` WS | 未实现 | ADR-005 P-06；愚者/死亡暂靠 `PHASE_SYNC` |
+| Redis 会话 / token | 未实现 | [auth-session](../reference/auth-session.md) |
+| `aiCount` 建房、自动分座 | **已实现**（2026-05-25） | 见 [gateway-room-modules §4](../reference/gateway-room-modules.md) |
+| Internal 路径 A | **是** | `/internal/game`，压测与 A 单测 |
+| 全角色 LLM 95% 解析率 | 待做 | §8.3 Week2；见 status A-02 |
+
+**双路径验收**：路径 A 可证明引擎跑局；路径 B 可证明 Formal 协议闭环（见 [gateway-integration](../reference/gateway-integration.md) §0）。
+
 ---
 
 ## 9. 风险与应对
@@ -1481,6 +1502,7 @@ com.werewolfengine
 | v1.0.12 | 2026-05-17 | **R24 遗言**：首夜昨夜死者、投票放逐者；第 2 夜起昨夜死亡无遗言；新增 `LAST_WORDS`；修订 R18 例外、§3.4、§4.3.1～4.3.3、§4.3.7 |
 | v1.0.13 | 2026-05-18 | **§4.5.1 Memory**：SeatMemory 投影（[ADR-004](../adr/004-ai-seat-memory.md)）。**不改变** v1.0.0 协议/规则冻结 |
 | v1.0.14 | 2026-05-18 | **文档**：`docs/README` 索引；子目录 `architecture/`、`progress/`、`reference/`。**不改变** 规则/协议冻结 |
+| v1.0.15 | 2026-05-25 | **§8.5 实现对照**；链 [status](status.md)、[ADR-005](../adr/005-gateway-formal-path.md)、[adr/README](../adr/README.md)。**不改变** 规则/协议冻结 |
 
 ---
 

@@ -83,7 +83,7 @@ public final class NightActions {
     ) {
         return switch (command.action()) {
             case KILL -> handleKill(room, actor, command.target());
-            case WOLF_CHAT -> handleWolfChat(room, actor);
+            case WOLF_CHAT -> handleWolfChat(room, actor, command);
             default -> fail(room, ActionErrorCode.INVALID_ACTION,
                     "Action not allowed in NIGHT_WOLF: " + command.action());
         };
@@ -113,12 +113,17 @@ public final class NightActions {
         return transition.orElseGet(() -> GameStateMachine.HandleActionResult.of(ack, List.of()));
     }
 
-    private GameStateMachine.HandleActionResult handleWolfChat(GameRoomState room, PlayerState actor) {
+    private GameStateMachine.HandleActionResult handleWolfChat(GameRoomState room, PlayerState actor, GameActionCommand command) {
         if (actor.getRole() != Role.WEREWOLF) {
             return fail(room, ActionErrorCode.INVALID_ACTION, "Only wolves can WOLF_CHAT");
         }
         room.setWolfChatInPhase(true);
-        ActionAck ack = ActionAck.ok("??????????????", room.getPhase(), null);
+        String content = command.content();
+        if (content != null && !content.isBlank()) {
+            com.werewolfengine.game.event.OutboundMessage.enqueueChat(
+                    room, "WEREWOLF", actor.getPlayerId(), content.trim());
+        }
+        ActionAck ack = ActionAck.ok("狼队商议已记录", room.getPhase(), null);
         return GameStateMachine.HandleActionResult.of(ack, buildWolfPhaseSyncs(room));
     }
 
@@ -142,7 +147,40 @@ public final class NightActions {
         room.clearWolfVotesAndLog();
 
         ActionAck ack = ActionAck.ok("???????????????????????", GamePhase.NIGHT_SEER, null);
-        return Optional.of(runAutopilotNightPhases(room, enterNightSeer(room, ack)));
+        return Optional.of(enterNightSeer(room, ack));
+    }
+
+    /**
+     * When the phase timer expires and no living role can act (PRD §4.3.7).
+     */
+    public Optional<GameStateMachine.HandleActionResult> applyTimedNoActorFallback(GameRoomState room) {
+        return switch (room.getPhase()) {
+            case NIGHT_SEER -> {
+                if (room.isSeerActedThisNight()) {
+                    yield Optional.empty();
+                }
+                if (seerCanAct(room)) {
+                    yield Optional.empty();
+                }
+                room.setSeerActedThisNight(true);
+                ActionAck auto = ActionAck.ok("预言家阶段超时（无存活预言家）", GamePhase.NIGHT_SEER, null);
+                yield Optional.of(enterNightWitch(room, auto));
+            }
+            case NIGHT_WITCH -> {
+                if (room.isWitchActedThisNight()) {
+                    yield Optional.empty();
+                }
+                if (witchCanAct(room)) {
+                    yield Optional.empty();
+                }
+                room.setWitchUsedSaveTonight(false);
+                room.setWitchPoisonTargetTonight(null);
+                room.setWitchActedThisNight(true);
+                ActionAck auto = ActionAck.ok("女巫阶段超时（无存活女巫）", GamePhase.NIGHT_WITCH, null);
+                yield Optional.of(finishNightAfterWitch(room, auto));
+            }
+            default -> Optional.empty();
+        };
     }
 
     private GameStateMachine.HandleActionResult runAutopilotNightPhases(
@@ -287,7 +325,7 @@ public final class NightActions {
 
         String msg = result == SeerCheckResult.WOLF ? "???????????" : "?????????";
         ActionAck ack = ActionAck.ok(msg, room.getPhase(), null);
-        return runAutopilotNightPhases(room, enterNightWitch(room, ack));
+        return enterNightWitch(room, ack);
     }
 
     public GameStateMachine.HandleActionResult finishNightAfterWitch(GameRoomState room, ActionAck priorAck) {

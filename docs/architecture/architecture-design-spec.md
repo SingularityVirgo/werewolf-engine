@@ -32,7 +32,7 @@
 | [requirements-mvp-v0.1.md](../progress/requirements-mvp-v0.1.md) | **需求与协议真源**；§4.3.8 引擎窄版实现契约 |
 | [adr/001](../adr/001-night-skill-pipeline.md) · [adr/002](../adr/002-death-bus-and-hunter-flow.md) | 夜内管道、`DeathBus`、`HunterShootFlow` |
 | [adr/003](../adr/003-ai-integration.md) · [adr/004](../adr/004-ai-seat-memory.md) | AI 接入、Memory、`GameView` |
-| [adr/005](../adr/005-gateway-push-and-phase-timer.md) | Gateway 推送、阶段定时 |
+| [adr/005](../adr/005-gateway-formal-path.md) | Gateway Formal（推送、tick、选型） |
 | [gateway-room-modules](../reference/gateway-room-modules.md) · [gateway-integration](../reference/gateway-integration.md) | B 侧实现与双路径联调 |
 | [tech-selection-feasibility.md](tech-selection-feasibility.md) | **技术栈与可行性**；本文落实为组件与部署视图 |
 
@@ -215,7 +215,7 @@ sequenceDiagram
 
 - **房间隔离**：任何推送键必须包含 `roomId`，禁止跨房间广播。
 - **角色隔离**：`NIGHT_WOLF` / `NIGHT_WITCH` / `NIGHT_SEER` 等阶段按 PRD §4.6.5 过滤接收者集合。
-- **实现提示**：`ConnectionManager` 维护 `(roomId, playerId) → WebSocketSession`；经 `GameEngineService.buildPhaseSync` 裁剪后推送（**已冻结**：[ADR-005](../adr/005-gateway-push-and-phase-timer.md)）。
+- **实现提示**：`ConnectionManager` 维护 `(roomId, playerId) → WebSocketSession`；经 `GameEngineService.buildPhaseSync` 裁剪后推送（[ADR-005](../adr/005-gateway-formal-path.md)）。
 - **细节与差距**：见 [gateway-room-modules §3](../reference/gateway-room-modules.md)；当前代码为请求-响应拉取，主动推送待实现。
 
 ---

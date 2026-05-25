@@ -7,7 +7,8 @@ import com.werewolfengine.game.model.GameWinner;
 import org.springframework.stereotype.Component;
 
 /**
- * Dev / load-test driver: runs {@link AiTurnCoordinator} until {@link GamePhase#GAME_OVER} (ADR-003).
+ * Dev / load-test driver: runs {@link GamePhaseScheduler} until {@link GamePhase#GAME_OVER} (ADR-003).
+ * When a phase countdown is active, advances the deadline so mock runs do not wall-clock wait.
  */
 @Component
 public class MockGameRunner {
@@ -15,11 +16,11 @@ public class MockGameRunner {
     public static final int DEFAULT_MAX_STEPS = 8_000;
 
     private final GameStateMachine stateMachine;
-    private final AiTurnCoordinator turnCoordinator;
+    private final GamePhaseScheduler phaseScheduler;
 
-    public MockGameRunner(GameStateMachine stateMachine, AiTurnCoordinator turnCoordinator) {
+    public MockGameRunner(GameStateMachine stateMachine, GamePhaseScheduler phaseScheduler) {
         this.stateMachine = stateMachine;
-        this.turnCoordinator = turnCoordinator;
+        this.phaseScheduler = phaseScheduler;
     }
 
     public RunResult runUntilGameOver(String roomId) {
@@ -35,21 +36,43 @@ public class MockGameRunner {
             if (room.getPhase() == GamePhase.GAME_OVER) {
                 return RunResult.finished(steps, room.getWinner());
             }
-            if (!turnCoordinator.tickOneStep(roomId, room)) {
+            GamePhaseScheduler.TickResult tick = phaseScheduler.tick(roomId);
+            if ("COUNTDOWN".equals(tick.status())) {
+                stateMachine.getRoom(roomId).ifPresent(r -> r.setPhaseDeadlineEpochMs(System.currentTimeMillis() - 1));
+                continue;
+            }
+            if ("STUCK".equals(tick.status())) {
+                if (stateMachine.applyTimedNightFallback(roomId)) {
+                    steps++;
+                    continue;
+                }
                 return RunResult.stuck(steps, room.getPhase(), lastPhase);
             }
-            lastPhase = room.getPhase();
+            if ("NO_OP".equals(tick.status())) {
+                return RunResult.stuck(steps, room.getPhase(), lastPhase);
+            }
+            if ("GAME_OVER".equals(tick.status())) {
+                GameRoomState end = stateMachine.getRoom(roomId).orElseThrow();
+                return RunResult.finished(steps + 1, end.getWinner());
+            }
+            lastPhase = stateMachine.getRoom(roomId).map(GameRoomState::getPhase).orElse(room.getPhase());
             steps++;
         }
         GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
         return RunResult.maxStepsExceeded(steps, room.getPhase());
     }
 
-    /** @deprecated use {@link AiTurnCoordinator#tickOneStep} via {@link GamePhaseScheduler} */
+    /** @deprecated use {@link GamePhaseScheduler#tick} */
     public boolean advanceOneStepPublic(String roomId) {
-        GameRoomState room = stateMachine.getRoom(roomId)
-                .orElseThrow(() -> new IllegalArgumentException("Room not found: " + roomId));
-        return turnCoordinator.tickOneStep(roomId, room);
+        GamePhaseScheduler.TickResult tick = phaseScheduler.tick(roomId);
+        if ("COUNTDOWN".equals(tick.status())) {
+            stateMachine.getRoom(roomId).ifPresent(r -> r.setPhaseDeadlineEpochMs(System.currentTimeMillis() - 1));
+            tick = phaseScheduler.tick(roomId);
+        }
+        if ("STUCK".equals(tick.status()) && stateMachine.applyTimedNightFallback(roomId)) {
+            tick = phaseScheduler.tick(roomId);
+        }
+        return !"STUCK".equals(tick.status()) && !"NO_OP".equals(tick.status());
     }
 
     public record RunResult(

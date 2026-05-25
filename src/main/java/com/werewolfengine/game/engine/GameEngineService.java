@@ -2,6 +2,7 @@ package com.werewolfengine.game.engine;
 
 import com.werewolfengine.ai.api.AIService;
 import com.werewolfengine.ai.api.PlayerIntent;
+import com.werewolfengine.game.chat.ChatMessageService;
 import com.werewolfengine.game.model.GameActionCommand;
 import com.werewolfengine.game.model.GameActionType;
 import com.werewolfengine.game.model.GamePhase;
@@ -30,19 +31,22 @@ public class GameEngineService {
     private final MockGameRunner mockGameRunner;
     private final ActionLogService actionLog;
     private final GamePhaseScheduler phaseScheduler;
+    private final ChatMessageService chatMessageService;
 
     public GameEngineService(
             GameStateMachine stateMachine,
             AIService aiService,
             MockGameRunner mockGameRunner,
             ActionLogService actionLog,
-            GamePhaseScheduler phaseScheduler
+            GamePhaseScheduler phaseScheduler,
+            ChatMessageService chatMessageService
     ) {
         this.stateMachine = stateMachine;
         this.aiService = aiService;
         this.mockGameRunner = mockGameRunner;
         this.actionLog = actionLog;
         this.phaseScheduler = phaseScheduler;
+        this.chatMessageService = chatMessageService;
     }
 
     public GameRoomState createDevRoom(String roomId) {
@@ -64,6 +68,11 @@ public class GameEngineService {
         return room;
     }
 
+    public void removeRoom(String roomId) {
+        stateMachine.removeRoom(roomId);
+        actionLog.clear(roomId);
+    }
+
     public GameRoomState getRoomState(String roomId) {
         return stateMachine.getRoom(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("Room not found: " + roomId));
@@ -75,6 +84,12 @@ public class GameEngineService {
 
     public GameStateMachine.StartGameResult startGame(String roomId) {
         return stateMachine.startGame(roomId);
+    }
+
+    public ChatMessageService.ChatResult submitChatMessage(String roomId, int playerId, String scope, String content) {
+        GameRoomState room = stateMachine.getRoom(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("Room not found: " + roomId));
+        return chatMessageService.handle(room, playerId, scope, content);
     }
 
     public ActionResult submitAction(String roomId, GameActionCommand command) {

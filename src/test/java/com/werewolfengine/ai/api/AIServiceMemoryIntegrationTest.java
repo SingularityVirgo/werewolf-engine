@@ -13,8 +13,11 @@ import com.werewolfengine.game.model.Role;
 import com.werewolfengine.game.observability.ActionLogEntry;
 import com.werewolfengine.game.observability.ActionLogService;
 import com.werewolfengine.game.orchestration.AiTurnCoordinator;
+import com.werewolfengine.game.orchestration.GamePhaseScheduler;
 import com.werewolfengine.game.orchestration.MockGameRunner;
+import com.werewolfengine.game.orchestration.PhaseTimeoutHandler;
 import com.werewolfengine.game.orchestration.TurnActorResolver;
+import com.werewolfengine.game.sync.PhaseCountdown;
 import com.werewolfengine.game.view.PerceptionEventKind;
 import com.werewolfengine.game.view.SeatPerceptionProjector;
 import com.werewolfengine.game.view.SeatPerceptionSlice;
@@ -43,11 +46,13 @@ class AIServiceMemoryIntegrationTest {
     private ActionLogService actionLog;
     private GameStateMachine stateMachine;
     private AiTurnCoordinator coordinator;
+    private GamePhaseScheduler phaseScheduler;
     private ChatModel chatModel;
     private AIService aiService;
 
     @BeforeEach
     void setUp() {
+        PhaseCountdown.setEnabled(false);
         actionLog = new ActionLogService();
         stateMachine = new GameStateMachine(actionLog);
         AiProperties properties = new AiProperties();
@@ -65,10 +70,12 @@ class AIServiceMemoryIntegrationTest {
                 chatModel,
                 actionLog
         );
-        coordinator = new AiTurnCoordinator(
+        TurnActorResolver resolver = new TurnActorResolver();
+        coordinator = new AiTurnCoordinator(stateMachine, resolver, aiService, actionLog);
+        phaseScheduler = new GamePhaseScheduler(
                 stateMachine,
-                new TurnActorResolver(),
-                aiService,
+                coordinator,
+                new PhaseTimeoutHandler(stateMachine, resolver, new MockAIPlayer(), actionLog),
                 actionLog
         );
     }
@@ -160,7 +167,6 @@ class AIServiceMemoryIntegrationTest {
     }
 
     private boolean advanceUntil(String roomId, Predicate<GameRoomState> done) {
-        MockGameRunner runner = new MockGameRunner(stateMachine, coordinator);
         for (int i = 0; i < MockGameRunner.DEFAULT_MAX_STEPS; i++) {
             GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
             if (done.test(room)) {
@@ -169,11 +175,20 @@ class AIServiceMemoryIntegrationTest {
             if (room.getPhase() == GamePhase.GAME_OVER) {
                 return false;
             }
-            if (!coordinator.tickOneStep(roomId, room)) {
+            if (!tickOne(roomId)) {
                 return false;
             }
         }
         return false;
+    }
+
+    private boolean tickOne(String roomId) {
+        GamePhaseScheduler.TickResult tick = phaseScheduler.tick(roomId);
+        if ("COUNTDOWN".equals(tick.status())) {
+            stateMachine.getRoom(roomId).ifPresent(r -> r.setPhaseDeadlineEpochMs(System.currentTimeMillis() - 1));
+            tick = phaseScheduler.tick(roomId);
+        }
+        return !"STUCK".equals(tick.status()) && !"NO_OP".equals(tick.status());
     }
 
     private static ChatResponse llmSkipSpeakResponse() {

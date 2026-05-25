@@ -1,5 +1,8 @@
 package com.werewolfengine.game.model;
 
+import com.werewolfengine.game.event.OutboundMessage;
+import com.werewolfengine.game.sync.PhaseCountdown;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -81,6 +84,11 @@ public final class GameRoomState {
 
     /** Seer has submitted CHECK for this night. */
     private boolean seerActedThisNight;
+
+    /** Wall-clock ms when the current phase (or per-turn window) ends; 0 = no timer. */
+    private long phaseDeadlineEpochMs;
+
+    private final List<OutboundMessage> outboundQueue = new ArrayList<>();
 
     public GameRoomState(String roomId) {
         this.roomId = roomId;
@@ -183,6 +191,20 @@ public final class GameRoomState {
 
     public void setPhase(GamePhase phase) {
         this.phase = phase;
+        PhaseCountdown.onPhaseOrTurnEntered(this);
+    }
+
+    public long getPhaseDeadlineEpochMs() {
+        return phaseDeadlineEpochMs;
+    }
+
+    public void setPhaseDeadlineEpochMs(long phaseDeadlineEpochMs) {
+        this.phaseDeadlineEpochMs = phaseDeadlineEpochMs;
+    }
+
+    /** Restarts per-speaker countdown without changing {@link #phase}. */
+    public void onActTurnAdvanced() {
+        PhaseCountdown.onPhaseOrTurnEntered(this);
     }
 
     public int getRound() {
@@ -450,5 +472,20 @@ public final class GameRoomState {
         witchPoisonTargetTonight = null;
         seerCheckTargetTonight = null;
         pendingWolfKillTarget = null;
+    }
+
+    public void enqueueOutbound(OutboundMessage message) {
+        if (message != null) {
+            outboundQueue.add(message);
+        }
+    }
+
+    public List<OutboundMessage> drainOutbound() {
+        if (outboundQueue.isEmpty()) {
+            return List.of();
+        }
+        List<OutboundMessage> drained = List.copyOf(outboundQueue);
+        outboundQueue.clear();
+        return drained;
     }
 }

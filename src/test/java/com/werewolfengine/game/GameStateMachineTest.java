@@ -42,19 +42,25 @@ class GameStateMachineTest {
     }
 
     private void completeNightToAnnounce(String roomId, GameRoomState room) {
-        if (room.getPhase() == GamePhase.NIGHT_SEER && seerAlive(room)) {
-            int seer = room.seerSeat();
-            int checkTarget = room.alivePlayerIds().stream()
-                    .filter(id -> id != seer)
-                    .findFirst()
-                    .orElseThrow();
-            sm.handleAction(roomId,
-                    new GameActionCommand(seer, GameActionType.CHECK, checkTarget, GamePhase.NIGHT_SEER));
+        for (int guard = 0; guard < 6; guard++) {
             room = sm.getRoom(roomId).orElseThrow();
-        }
-        if (room.getPhase() == GamePhase.NIGHT_WITCH && witchAlive(room)) {
-            sm.handleAction(roomId,
-                    new GameActionCommand(room.witchSeat(), GameActionType.SKIP, null, GamePhase.NIGHT_WITCH));
+            if (room.getPhase() != GamePhase.NIGHT_SEER && room.getPhase() != GamePhase.NIGHT_WITCH) {
+                return;
+            }
+            if (room.getPhase() == GamePhase.NIGHT_SEER && seerAlive(room)) {
+                int seer = room.seerSeat();
+                int checkTarget = room.alivePlayerIds().stream()
+                        .filter(id -> id != seer)
+                        .findFirst()
+                        .orElseThrow();
+                sm.handleAction(roomId,
+                        new GameActionCommand(seer, GameActionType.CHECK, checkTarget, GamePhase.NIGHT_SEER));
+            } else if (room.getPhase() == GamePhase.NIGHT_WITCH && witchAlive(room)) {
+                sm.handleAction(roomId,
+                        new GameActionCommand(room.witchSeat(), GameActionType.SKIP, null, GamePhase.NIGHT_WITCH));
+            } else {
+                sm.applyTimedNightFallback(roomId);
+            }
         }
     }
 

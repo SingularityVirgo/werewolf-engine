@@ -4,6 +4,7 @@ import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.model.GamePhase;
 import com.werewolfengine.game.model.GameRoomState;
 import com.werewolfengine.game.observability.ActionLogService;
+import com.werewolfengine.game.sync.PhaseCountdown;
 import org.springframework.stereotype.Component;
 
 /**
@@ -14,15 +15,18 @@ public class GamePhaseScheduler {
 
     private final GameStateMachine stateMachine;
     private final AiTurnCoordinator turnCoordinator;
+    private final PhaseTimeoutHandler phaseTimeoutHandler;
     private final ActionLogService actionLog;
 
     public GamePhaseScheduler(
             GameStateMachine stateMachine,
             AiTurnCoordinator turnCoordinator,
+            PhaseTimeoutHandler phaseTimeoutHandler,
             ActionLogService actionLog
     ) {
         this.stateMachine = stateMachine;
         this.turnCoordinator = turnCoordinator;
+        this.phaseTimeoutHandler = phaseTimeoutHandler;
         this.actionLog = actionLog;
     }
 
@@ -32,6 +36,15 @@ public class GamePhaseScheduler {
         GamePhase phase = room.getPhase();
         if (phase == GamePhase.GAME_OVER) {
             return TickResult.gameOver(room.getWinner() != null ? room.getWinner().name() : "");
+        }
+        if (PhaseCountdown.isEnabled() && PhaseCountdown.hasTimer(phase) && !PhaseCountdown.isExpired(room)) {
+            return TickResult.countdown(phase.name());
+        }
+        if (PhaseCountdown.isEnabled()
+                && PhaseCountdown.isExpired(room)
+                && phaseTimeoutHandler.applyIfExpired(roomId, room)) {
+            GamePhase after = stateMachine.getRoom(roomId).map(GameRoomState::getPhase).orElse(phase);
+            return after != phase ? TickResult.advanced(phase.name()) : TickResult.aiStep(phase.name());
         }
         if (phase == GamePhase.NIGHT_DEATH_ANNOUNCE || phase == GamePhase.EXILE_DEATH_ANNOUNCE) {
             int round = room.getRound();
@@ -73,6 +86,10 @@ public class GamePhaseScheduler {
 
         public static TickResult gameOver(String winner) {
             return new TickResult("GAME_OVER", GamePhase.GAME_OVER.name(), winner);
+        }
+
+        public static TickResult countdown(String phase) {
+            return new TickResult("COUNTDOWN", phase, "waiting");
         }
     }
 }

@@ -13,9 +13,10 @@ Gateway/Room 详见 [gateway-room-modules](gateway-room-modules.md)。
 | **门面** | `game.engine` | `GameEngineService` | HTTP/网关入口：建房、提交动作、tick、Mock 自动对局 |
 | **状态机** | `game.engine` | `GameStateMachine` | 权威局况；`handleAction` / `advanceDayAnnounce` |
 | **编排** | `game.orchestration` | `AiTurnCoordinator`, `TurnActorResolver` | AI 选座与 SM 桥接 |
-| **编排** | `game.orchestration` | `GamePhaseScheduler` | 网关 `phase-tick` |
+| **编排** | `game.orchestration` | `GamePhaseScheduler` | 网关 `phase-tick`；未到期返回 `COUNTDOWN` |
+| **编排** | `game.orchestration` | `PhaseTimeoutHandler` | 阶段超时兜底（P-05） |
 | **编排** | `game.orchestration` | `MockGameRunner` | dev/压测跑到 `GAME_OVER` |
-| **同步** | `game.sync` | `PhaseSyncBuilder` | 按座 `PHASE_SYNC` |
+| **同步** | `game.sync` | `PhaseCountdown`, `PhaseSyncBuilder` | 权威倒计时 + 按座 `PHASE_SYNC` |
 | **视图** | `game.view` | `GameViews`, `GameView`, `SeatVisibility`, `SeatPerceptionProjector` | 按座可见性 + episodic 投影（ADR-004） |
 | **开局** | `game.setup` | `RoleAssigner` | 发牌 |
 | **夜晚** | `game.night` | `NightActions`, `NightSkillPipeline`, `NightResolver`, `WolfVoteResolver` | 夜技能与结算 |
@@ -96,7 +97,7 @@ GameWebSocketHandler → ConnectionManager | RoomService | MessageRouter
 MessageRouter → GameEngineService
 ```
 
-推送目标态见 [ADR-005](../adr/005-gateway-push-and-phase-timer.md)。
+Gateway 见 [ADR-005](../adr/005-gateway-formal-path.md)。
 
 ---
 

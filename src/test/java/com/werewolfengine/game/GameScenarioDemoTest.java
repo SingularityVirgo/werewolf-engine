@@ -372,6 +372,31 @@ class GameScenarioDemoTest {
         }
     }
 
+    /** PRD §4.3.7 — dead seer/witch phases still run; advance via timeout fallback in tests. */
+    private void advancePastInactiveNightRoles(String roomId) {
+        for (int guard = 0; guard < 6; guard++) {
+            GameRoomState room = refresh(roomId);
+            if (room.getPhase() != GamePhase.NIGHT_SEER && room.getPhase() != GamePhase.NIGHT_WITCH) {
+                return;
+            }
+            int seer = room.seerSeat();
+            if (room.getPhase() == GamePhase.NIGHT_SEER
+                    && seer > 0
+                    && room.getPlayer(seer) != null
+                    && room.getPlayer(seer).isAlive()) {
+                return;
+            }
+            int witch = room.witchSeat();
+            if (room.getPhase() == GamePhase.NIGHT_WITCH
+                    && witch > 0
+                    && room.getPlayer(witch) != null
+                    && room.getPlayer(witch).isAlive()) {
+                return;
+            }
+            sm.applyTimedNightFallback(roomId);
+        }
+    }
+
     private void runSeerCheck(String roomId, int target) {
         GameRoomState room = refresh(roomId);
         if (room.getPhase() != GamePhase.NIGHT_SEER) {
@@ -384,6 +409,7 @@ class GameScenarioDemoTest {
     }
 
     private void runWitchSave(String roomId) {
+        advancePastInactiveNightRoles(roomId);
         GameRoomState room = refresh(roomId);
         if (room.getPhase() == GamePhase.NIGHT_WITCH) {
             sm.handleAction(roomId, cmd(WITCH, GameActionType.SAVE, null, GamePhase.NIGHT_WITCH));
@@ -391,6 +417,7 @@ class GameScenarioDemoTest {
     }
 
     private void runWitchPoison(String roomId, int target) {
+        advancePastInactiveNightRoles(roomId);
         GameRoomState room = refresh(roomId);
         if (room.getPhase() == GamePhase.NIGHT_WITCH) {
             sm.handleAction(roomId, cmd(WITCH, GameActionType.POISON, target, GamePhase.NIGHT_WITCH));
@@ -398,6 +425,7 @@ class GameScenarioDemoTest {
     }
 
     private void runWitchSkip(String roomId) {
+        advancePastInactiveNightRoles(roomId);
         GameRoomState room = refresh(roomId);
         if (room.getPhase() == GamePhase.NIGHT_WITCH) {
             sm.handleAction(roomId, cmd(WITCH, GameActionType.SKIP, null, GamePhase.NIGHT_WITCH));

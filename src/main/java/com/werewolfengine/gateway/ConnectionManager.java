@@ -1,11 +1,15 @@
 package com.werewolfengine.gateway;
 
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Component
 public class ConnectionManager {
 
     private final Map<String, ConnectionRecord> bySessionId = new ConcurrentHashMap<>();
@@ -20,6 +24,9 @@ public class ConnectionManager {
         if (current == null) {
             return;
         }
+        if (current.roomId() != null && current.seatId() != null) {
+            bySeatKey.remove(seatKey(current.roomId(), current.seatId()));
+        }
         ConnectionRecord updated = new ConnectionRecord(sessionId, current.session(), roomId, seatId);
         bySessionId.put(sessionId, updated);
         if (roomId != null && seatId != null) {
@@ -31,10 +38,41 @@ public class ConnectionManager {
         return Optional.ofNullable(bySeatKey.get(seatKey(roomId, seatId)));
     }
 
+    public Optional<ConnectionRecord> findBySession(String sessionId) {
+        return Optional.ofNullable(bySessionId.get(sessionId));
+    }
+
+    public List<Integer> connectedSeatIds(String roomId) {
+        List<Integer> seats = new ArrayList<>();
+        for (ConnectionRecord record : bySeatKey.values()) {
+            if (!roomId.equals(record.roomId()) || record.seatId() == null) {
+                continue;
+            }
+            WebSocketSession session = record.session();
+            if (session != null && session.isOpen()) {
+                seats.add(record.seatId());
+            }
+        }
+        return seats;
+    }
+
     public void remove(String sessionId) {
         ConnectionRecord record = bySessionId.remove(sessionId);
         if (record != null && record.roomId() != null && record.seatId() != null) {
             bySeatKey.remove(seatKey(record.roomId(), record.seatId()));
+        }
+    }
+
+    /** Drops all seat bindings for a dissolved room (sessions stay open). */
+    public void removeRoom(String roomId) {
+        List<String> sessionIds = new ArrayList<>();
+        for (ConnectionRecord record : bySessionId.values()) {
+            if (roomId.equals(record.roomId())) {
+                sessionIds.add(record.sessionId());
+            }
+        }
+        for (String sessionId : sessionIds) {
+            remove(sessionId);
         }
     }
 
