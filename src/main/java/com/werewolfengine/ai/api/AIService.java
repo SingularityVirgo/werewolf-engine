@@ -82,6 +82,10 @@ public class AIService {
         if (fallback.isEmpty()) {
             return Optional.empty();
         }
+        // Mock wolf-chat gate must run before LLM can choose KILL (ADR-004 M3 / PRD wolf coordination).
+        if (fallback.get().action() == GameActionType.WOLF_CHAT) {
+            return fallback;
+        }
         if (!shouldUseLlm(room, playerId)) {
             return fallback;
         }

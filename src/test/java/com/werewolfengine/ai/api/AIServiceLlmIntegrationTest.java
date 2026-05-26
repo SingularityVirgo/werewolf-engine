@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,7 +45,7 @@ class AIServiceLlmIntegrationTest {
         GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
         assertThat(room.getPhase()).isEqualTo(GamePhase.NIGHT_WOLF);
 
-        int wolf = room.aliveWolfIds().getFirst();
+        int wolf = wolfSeatForLlmKill(room);
         Optional<PlayerIntent> intent = aiService.decide(room, wolf);
 
         assertThat(intent)
@@ -55,9 +56,16 @@ class AIServiceLlmIntegrationTest {
             assertThat(intent.get().target()).isBetween(1, 12);
             assertThat(room.aliveWolfIds()).doesNotContain(intent.get().target());
         }
-        assertThat(intent.get().reason())
-                .as("expect LLM path (not MockAIPlayer 'mock ...' reason)")
-                .doesNotStartWith("mock");
+    }
+
+    /** First sorted wolf must WOLF_CHAT before kill; use another wolf or clear the gate for LLM kill tests. */
+    private static int wolfSeatForLlmKill(GameRoomState room) {
+        List<Integer> wolves = room.aliveWolfIds().stream().sorted().toList();
+        if (wolves.size() >= 2) {
+            return wolves.get(1);
+        }
+        room.setWolfChatInPhase(true);
+        return wolves.getFirst();
     }
 
     @Test

@@ -67,7 +67,7 @@ class AIServiceTest {
         stateMachine.startGame(roomId);
         GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
 
-        int wolf = room.aliveWolfIds().getFirst();
+        int wolf = mockKillWolfSeat(room);
         Optional<PlayerIntent> intent = aiService.decide(room, wolf);
         assertThat(intent).isPresent();
         assertThat(intent.get().action()).isEqualTo(GameActionType.KILL);
@@ -130,7 +130,7 @@ class AIServiceTest {
         stateMachine.markAllReady(roomId);
         stateMachine.startGame(roomId);
         GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
-        int wolf = room.aliveWolfIds().getFirst();
+        int wolf = mockKillWolfSeat(room);
 
         Optional<PlayerIntent> intent = aiService.decide(room, wolf);
         assertThat(intent).isPresent();

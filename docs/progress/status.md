@@ -2,7 +2,7 @@
 
 | 属性 | 值 |
 |------|-----|
-| 更新 | 2026-05-25 |
+| 更新 | 2026-05-26 |
 | 需求基线 | [PRD v1.0.15](requirements-mvp-v0.1.md) |
 | ADR 索引 | [adr/README.md](../adr/README.md) |
 | Gateway | [ADR-005](../adr/005-gateway-formal-path.md) |
@@ -13,7 +13,7 @@
 
 ## 结论（一句话）
 
-**规则引擎 + Formal 协议 P0 已通**（Mock/LLM 整局、Seat Memory、Day4 10/10）；距 PRD-MVP 完整产品形态仍差 **阶段倒计时/超时法官**、**全角色 LLM 正式验收 + 压测**、**房间产品化（aiCount/重连/持久化/鉴权）**。
+**规则引擎 + Formal 协议 P0 已通**（Mock/LLM 整局、Seat Memory、Day4 10/10、P-05 countdown）；距 PRD-MVP 完整产品形态仍差 **法官超时兜底细化（G-06 等）**、**全角色 LLM 正式验收 + 压测**、**房间产品化（断线重连/持久化/鉴权）**。
 
 | 维度 | 状态 |
 |------|------|
@@ -23,11 +23,11 @@
 | Seat Memory（M3） | **已实现**（[ADR-004](../adr/004-ai-seat-memory.md)） |
 | Bot Formal 联调 | **Day4 10/10**（`bot/run_day4_formal.py`，2026-05-25） |
 
-**测试（2026-05-25）**
+**测试（2026-05-26）**
 
 | 项 | 结果 |
 |----|------|
-| `mvnw.cmd test` | **68** 测全过（含 LLM 集成，需 `DEEPSEEK_API_KEY`） |
+| `mvnw.cmd test` | **83** 测全过（含 LLM 集成，需 `DEEPSEEK_API_KEY`） |
 | `scripts/formal-path-smoke.py` | 联调 7/8 常见（countdown 下末项）；曾 8/8（无 P-05） |
 | `scripts/countdown-observe.py` | P-05：WS `countdown` 递减 |
 | `scripts/formal-llm-smoke.py` | 整局 `GAME_OVER`（124 tick）；`action_log` 49 条 LLM（`deepseek-v4-flash`） |
@@ -47,7 +47,7 @@
 | §8.2 Day4 五项 | ✅ `run_day4_formal.py` |
 | §8.5 Formal Mock/AI 整局 | ✅ |
 | ADR-004 Seat Memory | ✅ |
-| ADR-005 P-01～P-04（推送、锁、tick、定时） | ✅ |
+| ADR-005 P-01～P-05（推送、锁、tick、定时、countdown） | ✅ |
 
 ---
 
@@ -57,9 +57,9 @@
 
 | 优先级 | PRD 目标 | 缺口 | 负责 |
 |--------|----------|------|------|
-| **P0** | 实时阶段同步，倒计时误差 ≤ 1s | **P-05 已实现**：权威 deadline + WS 递减；验收见 `countdown-observe.py` | B ✅ |
+| **P0** | 实时阶段同步，倒计时误差 ≤ 1s | ✅ P-05：权威 deadline + WS 递减（`countdown-observe.py`） | B |
 | **P0** | 非法操作不污染状态 | 单测 ✅；Formal 缺系统化 WS 非法用例集 | A/B |
-| **P1** | 真人 + AI 混合（S1） | `aiCount` 自动补位、`join` 自动分座未做 | B |
+| **P1** | 真人 + AI 混合（S1） | 建房 `aiCount` / `join` 自动分座 ✅；对局掉线托管、混合调度未做 | B |
 | **P1** | AI JSON 50 次解析率 > 95%，3s 超时 fallback | A-02 待验收；dev `timeout=15s` 与 PRD 3s 不一致 | A |
 | **P1** | 离开 / 30s 重连 / 掉线托管 | §2.3、§4.2 未做 | B |
 
@@ -121,7 +121,7 @@
 | 阶段切换（不含 LLM） | < 500ms | 系统阶段即时；未系统打点 |
 | AI P95 | < 3s | LLM 冒烟 avg 2.25s，max 4.7s — 未正式验收 |
 | 100 局无状态异常 | 压测 | ❌ 报告 v0.1 未出 |
-| 信息隔离 | 私密字段不串座 | sync 裁剪 ✅；定向推送压测不足 |
+| 信息隔离 | 私密字段不串座 | sync 裁剪 ✅；M3 狼聊隔离 ✅；定向推送压测不足 |
 
 ### §8 里程碑
 
@@ -129,7 +129,7 @@
 |--------|------|------|
 | §8.1 D5-6 | 压测 20 局 | ❌ |
 | §8.3 D4-5 | 全角色 AI + **100 局压测报告** | ❌（C 主责） |
-| §8.3 D6-7 | 真人 + Bot 混合局 | 部分（依赖 S1） |
+| §8.3 D6-7 | 真人 + Bot 混合局 | 部分（建房/分座 ✅；断线/托管未做） |
 | §8.4 Day7 | 协议/Schema 冻结会 | 文档 ✅；实现对照仍有 gap |
 
 ---
@@ -143,7 +143,7 @@
 - LangChain4j + DeepSeek（`AIServiceLlmIntegrationTest`）
 - **Gateway P0**：`WsPushService`、`RoomExecutionGuard`、`RoomPhaseTickScheduler`、`ConnectionManager` Bean；`POST /api/room/.../phase-tick`；WS `PHASE_TICK`（dev）
 - **P-05**：`PhaseCountdown` + `PhaseTimeoutHandler`；`PHASE_SYNC.countdown` 递减推送（见 [gateway-integration §6](../reference/gateway-integration.md)）
-- **room**：建房 / join / ready / start / snapshot
+- **room**：建房 / `aiCount` 预占位 / `join` 自动分座 / ready / start / snapshot / 解散
 - **Bot**：路径 A `auto_play` / `tick_play`；路径 B `run_day4_formal` + `http_api` / `ws_client`
 
 ---
@@ -165,8 +165,7 @@
 
 | ID | 项 | PRD | 状态 |
 |----|-----|-----|------|
-| P-01～P-04 | 推送、锁、tick、定时 | §8.5 | **完成** |
-| P-05 | `countdown` 权威计时 + 推送 | §1.2 P0、§4.6 | **完成**（2026-05-25） |
+| P-01～P-05 | 推送、锁、tick、定时、countdown | §8.5 | **完成** |
 | P-06 | `GAME_EVENT` WS 桥接 | §4.6 | ✅ |
 | P-07 | Redis 会话 / token 鉴权 | §4.7.2、§2.3 | 未做 |
 | P-08 | 推送收窄 `affectedSeats` | ADR-005 | 未做 |
@@ -233,3 +232,5 @@
 | v1.4 | 2026-05-25 | B P0；68 测；Bot Day4 |
 | v1.5 | 2026-05-25 | 文档重组；PRD v1.0.15 §8.5；Gateway ADR 统一为 005-gateway-formal-path |
 | v1.6 | 2026-05-25 | 增补 PRD MVP 全量对照（§1.2～§8 缺口表、非功能、里程碑、负责人索引） |
+| v1.7 | 2026-05-25 | 拉齐一句话结论、§1.2 S1、ADR-005 P-05、单测 83/1 失败 |
+| v1.8 | 2026-05-26 | M3 狼聊隔离：`AIService` 保留 WOLF_CHAT 门禁；83 测全过 |
