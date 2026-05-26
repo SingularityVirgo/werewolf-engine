@@ -22,12 +22,19 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative card max-w-lg w-full mx-4 animate-slide-up">
+      <div className="absolute inset-0 bg-night/80" onClick={onClose} aria-hidden="true" />
+      <div className="relative panel max-w-lg w-full mx-4 animate-fade-in">
         {title && (
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gold">{title}</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            <h2 className="text-title font-semibold text-gold">{title}</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-text-muted hover:text-text-primary text-xl leading-none w-8 h-8 flex items-center justify-center"
+              aria-label="关闭"
+            >
+              ×
+            </button>
           </div>
         )}
         {children}

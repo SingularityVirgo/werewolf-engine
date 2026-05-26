@@ -151,6 +151,28 @@ public final class NightActions {
     }
 
     /**
+     * Wolf phase ended by countdown: resolve collected votes (R10) or random non-wolf if none (PRD §4.3.3, G-06).
+     */
+    public Optional<GameStateMachine.HandleActionResult> forceResolveWolfPhaseOnTimeout(GameRoomState room) {
+        if (room.getPhase() != GamePhase.NIGHT_WOLF) {
+            return Optional.empty();
+        }
+        Optional<GameStateMachine.HandleActionResult> allVoted = tryAdvanceAfterAllWolvesVoted(room);
+        if (allVoted.isPresent()) {
+            return allVoted;
+        }
+        Map<Integer, Integer> votesSnapshot = Map.copyOf(room.getWolfKillVotes());
+        int resolved = WolfVoteResolver.resolveKillTarget(room);
+        room.setPendingWolfKillTarget(resolved);
+        if (wolfKillResolvedListener != null) {
+            wolfKillResolvedListener.onResolved(room, resolved, votesSnapshot);
+        }
+        room.clearWolfVotesAndLog();
+        ActionAck ack = ActionAck.ok("狼人阶段超时，刀口已结算", GamePhase.NIGHT_SEER, null);
+        return Optional.of(enterNightSeer(room, ack));
+    }
+
+    /**
      * When the phase timer expires and no living role can act (PRD §4.3.7).
      */
     public Optional<GameStateMachine.HandleActionResult> applyTimedNoActorFallback(GameRoomState room) {

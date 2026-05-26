@@ -70,7 +70,11 @@ class MemoryPlaythroughDemoTest {
         GamePhaseScheduler phaseScheduler = new GamePhaseScheduler(
                 stateMachine,
                 coordinator,
-                new PhaseTimeoutHandler(stateMachine, new TurnActorResolver(), new MockAIPlayer(), actionLog),
+                new PhaseTimeoutHandler(
+                        stateMachine,
+                        new TurnActorResolver(),
+                        aiService,
+                        actionLog),
                 actionLog
         );
         MockGameRunner runner = new MockGameRunner(stateMachine, phaseScheduler);

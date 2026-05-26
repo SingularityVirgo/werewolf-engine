@@ -21,7 +21,7 @@ public class AiIntentParser {
         if (raw == null || raw.isBlank()) {
             throw new IllegalArgumentException("empty LLM response");
         }
-        String json = extractJson(raw.trim());
+        String json = extractJson(normalizeLlmPayload(raw.trim()));
         AiActionJson dto;
         try {
             dto = jsonMapper.readValue(json, AiActionJson.class);
@@ -45,6 +45,38 @@ public class AiIntentParser {
             reason = "llm";
         }
         return new PlayerIntent(type, dto.target(), reason, dto.content(), dto.thinking());
+    }
+
+    /**
+     * Repairs DeepSeek {@code reasoning_content} pseudo-JSON (no braces, unquoted keys/enum values).
+     */
+    static String normalizeLlmPayload(String text) {
+        String s = text.trim();
+        if (s.isEmpty()) {
+            return s;
+        }
+        int brace = s.indexOf('{');
+        if (brace == 0) {
+            return s;
+        }
+        if (brace > 0) {
+            return s.substring(brace);
+        }
+        if (s.startsWith("\":\"")) {
+            // DeepSeek reasoning_content: `":"思考…",\n"action":"CHECK",…}`
+            s = "{\"thinking\":" + s.substring(2);
+        } else if (s.startsWith(":\"")) {
+            s = "{\"thinking\":" + s.substring(1);
+        } else if (!s.startsWith("{")) {
+            s = "{" + s;
+        }
+        s = s.replaceAll("(?m)\n(?=(action|target|reason|content)\\s*:)", ",\n");
+        s = s.replaceAll("(?m)(?<![\"\\w])(action|target|reason|content|thinking)\\s*:", "\"$1\":");
+        s = s.replaceAll("\"action\"\\s*:\\s*([A-Z][A-Z0-9_]*)\\s*(?=[,}\\n\\r]|$)", "\"action\":\"$1\"");
+        if (!s.endsWith("}")) {
+            s = s + "}";
+        }
+        return s;
     }
 
     static String extractJson(String text) {

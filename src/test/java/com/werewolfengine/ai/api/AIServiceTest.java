@@ -139,6 +139,29 @@ class AIServiceTest {
     }
 
     @Test
+    void triesLlmForSeerWhenWolvesOnlyFalse() {
+        when(chatModel.chat(anyList())).thenReturn(ChatResponse.builder()
+                .aiMessage(dev.langchain4j.data.message.AiMessage.from(
+                        "{\"action\":\"CHECK\",\"target\":5,\"reason\":\"查5\"}"))
+                .build());
+
+        String roomId = "llm_seer";
+        stateMachine.createRoom(roomId);
+        stateMachine.markAllReady(roomId);
+        stateMachine.startGame(roomId);
+        GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
+        room.setPhase(GamePhase.NIGHT_SEER);
+        room.setSeerActedThisNight(false);
+        int seer = room.seerSeat();
+
+        Optional<DecisionResult> result = aiService.decideWithSource(room, seer);
+        assertThat(result).isPresent();
+        assertThat(result.get().source()).isEqualTo(DecisionResult.Source.LLM);
+        assertThat(result.get().intent().action()).isEqualTo(GameActionType.CHECK);
+        assertThat(result.get().intent().target()).isEqualTo(5);
+    }
+
+    @Test
     void disabledUsesMockOnly() {
         properties.setEnabled(false);
         AIService disabled = new AIService(
@@ -159,9 +182,10 @@ class AIServiceTest {
         GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
         int wolf = mockKillWolfSeat(room);
 
-        Optional<PlayerIntent> intent = disabled.decide(room, wolf);
-        assertThat(intent).isPresent();
-        assertThat(intent.get().action()).isEqualTo(GameActionType.KILL);
+        Optional<DecisionResult> result = disabled.decideWithSource(room, wolf);
+        assertThat(result).isPresent();
+        assertThat(result.get().source()).isEqualTo(DecisionResult.Source.MOCK_ONLY);
+        assertThat(result.get().intent().action()).isEqualTo(GameActionType.KILL);
     }
 
     private static int mockKillWolfSeat(GameRoomState room) {

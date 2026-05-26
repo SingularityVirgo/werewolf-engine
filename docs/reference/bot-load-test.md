@@ -4,7 +4,7 @@
 |------|-----|
 | 版本 | v0.1 |
 | 日期 | 2026-05-18 |
-| 代码 | [bot/](../../bot/) |
+| 代码 | [scripts/](../../scripts/) |
 | 协议 | [PRD §4.6、§6](../progress/requirements-mvp-v0.1.md) |
 | B 字段对照 | [gateway-room-modules](gateway-room-modules.md) |
 
@@ -15,7 +15,7 @@
 | 路径 | 入口 | 用途 | Week1 验收 |
 |------|------|------|------------|
 | **A — Internal** | `POST /internal/game/...` | A 测 SM、`mock-auto-play`、tick 压测 | ✅ 可跑通整局 |
-| **B — Formal** | `POST /api/room` + `WS /ws/game` | 产品联调、Day4 五项 | ✅ B 推送/tick 已实现；跑 [run_day4_formal.py](../../bot/run_day4_formal.py) |
+| **B — Formal** | `POST /api/room` + `WS /ws/game` | 产品联调、Day4 五项 | ✅ B 推送/tick 已实现；跑 [run_day4_formal.py](../../scripts/formal/run_day4_formal.py) |
 
 **压测报告 v0.1** 须写明使用的路径；仅 A 不能证明 Formal 协议闭环。
 
@@ -40,7 +40,7 @@
 
 ## 3. Day4 联调脚本（目标）
 
-运行 `bot/run_day4_formal.py`（已实现）：
+运行 `scripts/formal/run_day4_formal.py`（已实现）：
 
 1. 房主：`POST /api/room` → `roomId`
 2. 12 座：`POST .../join` + 各座 WS `JOIN_ROOM`
@@ -57,11 +57,14 @@
 
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| `auto_play_client.py` | A | 一键 `mock-auto-play` |
-| `tick_play_client.py` | A | 循环 `phase-tick` |
-| `export_action_log.py` | A | 导出并校验 log |
-| `run_day4_formal.py` | **B** | Day4 五项 + 可选双房隔离 |
-| `bot_player.py` | B | 高层 API（Formal 对齐） |
+| `auto_play_client.py` | `scripts/internal/` | 一键 `mock-auto-play` |
+| `tick_play_client.py` | `scripts/internal/` | 循环 `phase-tick` |
+| `export_action_log.py` | `scripts/internal/` | 导出并校验 log |
+| `run_day4_formal.py` | `scripts/formal/` | Day4 五项 + 可选双房隔离 |
+| `formal_path_smoke.py` | `scripts/formal/` | Formal 全链路冒烟 |
+| `countdown_observe.py` | `scripts/formal/` | P-05 countdown 验收 |
+| `formal_llm_smoke.py` | `scripts/formal/` | Formal + LLM 整局 |
+| `lib/bot_player.py` | `scripts/lib/` | 高层 API（Formal 对齐） |
 
 环境变量：
 

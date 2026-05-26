@@ -62,13 +62,14 @@ public class RoomController {
 
     public Map<String, Object> create(@RequestBody(required = false) CreateRoomCommand command) {
 
-        CreateRoomCommand cmd = command != null ? command : new CreateRoomCommand(null, null, 0);
+        CreateRoomCommand cmd = command != null ? command : new CreateRoomCommand(null, null, 0, null);
 
         int aiCount = cmd.aiCount() != null ? cmd.aiCount() : 0;
 
         try {
 
-            RoomService.RoomSnapshot snap = roomService.createRoom(cmd.roomId(), cmd.hostUserId(), aiCount);
+            RoomService.RoomSnapshot snap = roomService.createRoom(
+                    cmd.roomId(), cmd.hostUserId(), aiCount, cmd.boardType());
 
             return roomResponse(snap);
 
@@ -350,6 +351,8 @@ public class RoomController {
 
         body.put("hostUserId", snap.hostUserId());
 
+        body.put("boardType", snap.boardType());
+
         body.put("readyCount", snap.readyCount());
 
         body.put("humanCount", snap.humanCount());
@@ -362,7 +365,7 @@ public class RoomController {
 
 
 
-    public record CreateRoomCommand(String roomId, Long hostUserId, Integer aiCount) {
+    public record CreateRoomCommand(String roomId, Long hostUserId, Integer aiCount, String boardType) {
 
     }
 

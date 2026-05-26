@@ -1,62 +1,66 @@
 import React from 'react';
-import { GamePhase, PhaseNames, Role, RoleEmojis, RoleNames } from '../../types/game';
+import { GamePhase, PhaseNames, Role, RoleNames } from '../../types/game';
+import { CountdownTimer } from './CountdownTimer';
 
 interface PhaseDisplayProps {
   phase: GamePhase;
   round: number;
   yourRole: Role | null;
+  countdown?: number | null;
 }
 
-const phaseColors: Record<GamePhase, string> = {
-  [GamePhase.WAITING]: 'bg-gray-700 text-gray-300',
-  [GamePhase.ROLE_ASSIGN]: 'bg-purple-700 text-purple-200',
-  [GamePhase.NIGHT_START]: 'bg-indigo-900 text-indigo-200',
-  [GamePhase.NIGHT_WOLF]: 'bg-wolf text-red-200',
-  [GamePhase.NIGHT_SEER]: 'bg-seer text-blue-200',
-  [GamePhase.NIGHT_WITCH]: 'bg-witch text-purple-200',
-  [GamePhase.HUNTER_SHOOT]: 'bg-hunter text-orange-200',
-  [GamePhase.NIGHT_DEATH_ANNOUNCE]: 'bg-gray-800 text-gray-200',
-  [GamePhase.LAST_WORDS]: 'bg-gray-800 text-gray-200',
-  [GamePhase.EXILE_DEATH_ANNOUNCE]: 'bg-gray-800 text-gray-200',
-  [GamePhase.DAY_DISCUSS]: 'bg-yellow-800 text-yellow-200',
-  [GamePhase.DAY_VOTE]: 'bg-orange-800 text-orange-200',
-  [GamePhase.VOTE_RESULT]: 'bg-orange-800 text-orange-200',
-  [GamePhase.CHECK_WIN]: 'bg-green-800 text-green-200',
-  [GamePhase.GAME_OVER]: 'bg-gold text-night',
+const phaseStyles: Record<GamePhase, string> = {
+  [GamePhase.WAITING]: 'bg-stone-surface text-text-secondary border-stone-border',
+  [GamePhase.ROLE_ASSIGN]: 'bg-stone-surface text-text-primary border-ember/30',
+  [GamePhase.NIGHT_START]: 'bg-stone-surface text-text-primary border-stone-border',
+  [GamePhase.NIGHT_WOLF]: 'bg-stone-surface text-text-primary border-wolf/40',
+  [GamePhase.NIGHT_SEER]: 'bg-stone-surface text-text-primary border-seer/40',
+  [GamePhase.NIGHT_WITCH]: 'bg-stone-surface text-text-primary border-witch/40',
+  [GamePhase.HUNTER_SHOOT]: 'bg-stone-surface text-text-primary border-hunter/40',
+  [GamePhase.NIGHT_DEATH_ANNOUNCE]: 'bg-stone-surface text-text-secondary border-stone-border',
+  [GamePhase.LAST_WORDS]: 'bg-stone-surface text-text-secondary border-stone-border',
+  [GamePhase.EXILE_DEATH_ANNOUNCE]: 'bg-stone-surface text-text-secondary border-stone-border',
+  [GamePhase.DAY_DISCUSS]: 'bg-stone-surface text-text-primary border-ember/20',
+  [GamePhase.DAY_VOTE]: 'bg-stone-surface text-text-primary border-ember/30',
+  [GamePhase.VOTE_RESULT]: 'bg-stone-surface text-text-secondary border-stone-border',
+  [GamePhase.CHECK_WIN]: 'bg-stone-surface text-text-secondary border-stone-border',
+  [GamePhase.GAME_OVER]: 'bg-stone-surface text-ember border-ember/40',
 };
 
-export const PhaseDisplay: React.FC<PhaseDisplayProps> = ({ phase, round, yourRole }) => {
-  const isNight = phase.toString().startsWith('NIGHT');
+export const PhaseDisplay: React.FC<PhaseDisplayProps> = ({ phase, round, yourRole, countdown }) => {
+  const isNight = phase.toString().startsWith('NIGHT') || phase === GamePhase.NIGHT_START;
   const isDay = phase.toString().startsWith('DAY');
 
   return (
-    <div className="card flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        {/* Phase badge */}
-        <span className={`phase-badge ${phaseColors[phase] || 'bg-gray-700'}`}>
+    <div className="panel flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className={`phase-badge border shrink-0 ${phaseStyles[phase] || 'bg-stone-surface border-stone-border'}`}>
           {PhaseNames[phase] || phase}
         </span>
 
-        {/* Round */}
         {round > 0 && (
-          <span className="text-sm text-gray-400">
-            第 {round} 晚/天
+          <span className="text-label text-text-muted font-mono tabular-nums shrink-0">
+            第 {round} 轮
           </span>
         )}
 
-        {/* Night / Day indicator */}
-        {isNight && <span className="text-sm text-indigo-300">🌙 夜晚</span>}
-        {isDay && <span className="text-sm text-yellow-300">☀️ 白天</span>}
+        {(isNight || isDay) && (
+          <span className="text-label text-text-muted uppercase shrink-0">
+            {isNight ? '夜晚' : '白天'}
+          </span>
+        )}
       </div>
 
-      {/* Role display */}
-      {yourRole && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">你的身份:</span>
-          <span className="text-lg">{RoleEmojis[yourRole]}</span>
-          <span className="text-sm font-semibold text-gold">{RoleNames[yourRole]}</span>
-        </div>
-      )}
+      <div className="flex items-center gap-4 shrink-0">
+        {countdown != null && <CountdownTimer countdown={countdown} />}
+
+        {yourRole && (
+          <div className="flex items-center gap-2">
+            <span className="text-label text-text-muted uppercase hidden sm:inline">身份</span>
+            <span className="text-body font-semibold text-ember">{RoleNames[yourRole]}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

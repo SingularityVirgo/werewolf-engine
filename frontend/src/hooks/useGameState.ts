@@ -14,6 +14,7 @@ import {
   GameEventPayload,
   ChatMessagePayload,
 } from '../types/game';
+import { formatGameEvent } from '../utils/gameEventFormat';
 
 // ===== Initial State =====
 
@@ -108,12 +109,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         }
       }
 
-      // Detect GAME_OVER from phase sync (backend doesn't send GAME_OVER message separately)
       if (sync.currentPhase === GamePhase.GAME_OVER) {
-        // Infer winner: if we know our role and alive players, we can guess
-        // But the most reliable approach is to just set game over state
-        // The winner will be determined by the backend and shown via the game over screen
-        const winner = state.winner; // preserve any previously set winner
+        const winner = state.winner;
+        const finalRoles = state.finalRoles;
+        const hasGameOverLog = state.gameLog.some((e) => e.phase === GamePhase.GAME_OVER);
         return {
           ...state,
           phase: GamePhase.GAME_OVER,
@@ -121,18 +120,22 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           round: sync.round,
           phaseSync: sync,
           players,
-          winner: winner || null,
-          finalRoles: null,
-          gameLog: [
-            ...state.gameLog,
-            {
-              id: Date.now(),
-              round: sync.round,
-              phase: GamePhase.GAME_OVER,
-              message: '游戏结束!',
-              type: 'system',
-            },
-          ],
+          winner,
+          finalRoles,
+          gameLog: hasGameOverLog
+            ? state.gameLog
+            : [
+                ...state.gameLog,
+                {
+                  id: Date.now(),
+                  round: sync.round,
+                  phase: GamePhase.GAME_OVER,
+                  message: winner
+                    ? `游戏结束 · ${winner === GameWinner.VILLAGERS ? '好人阵营' : '狼人阵营'}获胜`
+                    : '游戏结束',
+                  type: 'system',
+                },
+              ],
         };
       }
 
@@ -179,12 +182,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'GAME_EVENT': {
       const evt = action.payload;
+      const deathTypes = new Set(['NIGHT_DEATHS', 'EXILE_ANNOUNCED', 'HUNTER_SHOT']);
       const entry: GameLogEntry = {
         id: Date.now(),
         round: state.round,
         phase: state.phase,
-        message: `事件: ${evt.type} ${JSON.stringify(evt.data)}`,
-        type: 'event',
+        message: formatGameEvent(evt),
+        type: deathTypes.has(evt.type) ? 'death' : 'event',
       };
       return { ...state, gameLog: [...state.gameLog, entry] };
     }

@@ -1,9 +1,9 @@
-# 狼人杀后端系统需求文档（MVP v1.0.15）
+# 狼人杀后端系统需求文档（MVP v1.0.17）
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.0.15（在 v1.0.14 基础上：新增 **§8.5 实现对照**、文档读序与 [status](../progress/status.md) 同步；**不改变** 规则与 WS 冻结项） |
-| 日期 | 2026-05-16 |
+| 版本 | v1.0.17（在 v1.0.16 基础上：§4.5.4 **LLM 6s 超时 + 解析重试最多 2 次**；**不改变** 规则与 WS 冻结项） |
+| 日期 | 2026-05-26 |
 | 范围 | 后端核心系统；**观战 UI 为课题加分项**，规格见 §1.5 |
 | 项目名 | werewolf-engine |
 | 课题 | **AI 狼人杀 — 多智能体协作与博弈的 Agent Team 实战** |
@@ -171,7 +171,7 @@
 | **P0** | 实时阶段同步 | 存活玩家均能收到 `PHASE_SYNC`，倒计时误差 ≤ 1s |
 | **P0** | 操作可校验 | 非法阶段/角色/目标的操作返回 `ERROR`，不污染状态 |
 | **P1** | 真人 + AI 混合房间 | 真人经 WS/Bot 与 AI 同局 |
-| **P1** | AI 输出可解析 | JSON 连续 50 次解析成功率 > 95%，超时 3s 有 fallback |
+| **P1** | AI 输出可解析 | JSON 连续 50 次解析成功率 > 95%，单次 LLM **6s** 超时，解析失败**最多重试 2 次**后 Mock fallback |
 | **P2** | 房间生命周期完善 | 解散、**复盘查询 API**、操作日志导出 |
 | **P2** | 用户体系 | JWT 登录、昵称、历史对局 |
 | **加分** | 观战 UI（课题） | 只读展示多 Agent 实时博弈；消费现有 WS 推送，**不要求**后端改规则 |
@@ -231,7 +231,7 @@
 | 痛点 | 后端方案 |
 |------|----------|
 | 不知道现在该做什么 | 每阶段切换强制推送 `PHASE_SYNC`（含 `canAct`、`countdown`、`yourRole`） |
-| 操作后没反馈 | `ACTION_ACK` + 必要时 `GAME_EVENT` |
+| 操作后没反馈 | `ACTION_ACK` + 必要时 `GAME_EVENT`；**Web UI** 须消费 ack（见 §4.8 **S-UI-04**：成功 Toast/待共识态、失败可见、法官区展示操作记录） |
 | 夜晚信息泄露 | 定向推送：狼人/女巫/预言家仅收本角色可见消息 |
 | AI 发言/行动不像人 | Prompt + Persona + 统一 JSON 格式 + fallback |
 | 有人掉线 | 30s 重连窗口；超时由系统默认操作或 AI 托管（**已冻结**） |
@@ -243,7 +243,7 @@
 |------|----------|
 | 断线 | Redis 保留 `playerId ↔ sessionId`；重连后恢复 `roomId`+`playerId`；游戏中掉线 30s 内可重连（**已冻结**） |
 | 作弊 | 校验 `phase`、角色、`target` 合法性；拒绝死人操作 |
-| LLM 延迟 | 单 AI 调用 3s 超时 → fallback；阶段总时长由阶段超时兜底（30s 等） |
+| LLM 延迟 | 单 AI 调用 **6s** 超时 → 解析失败**最多重试 2 次** → 仍失败则 Mock fallback；阶段总时长由阶段倒计时兜底（30s/60s 等） |
 
 ---
 
@@ -801,13 +801,14 @@ GameStateMachine          # 编排：phase 推进、handleAction 路由、PHASE_
 - `target`：无目标时省略或 `null`
 - `SPEAK` / `WOLF_CHAT`（AI JSON）：**已冻结**——长文本正文使用 **`content`** 字段；`reason` 仅保留不超过 30 字的短摘要（可与 `CHAT_MESSAGE.content` 对齐展示）
 
-#### 4.5.4 超时与 Fallback
+#### 4.5.4 超时、重试与 Fallback（已冻结）
 
 | 条件 | 行为 |
 |------|------|
-| LLM 3s 无响应 | 使用 fallback |
-| JSON 解析失败 | **已冻结**：重试 **0** 次，直接 fallback |
-| action 非法 | fallback |
+| LLM **6s** 无响应 | 使用 Mock fallback（`MockAIPlayer`） |
+| JSON 解析失败 | **已冻结**：**最多重试 2 次**（共最多 3 次解析尝试）；仍失败则 Mock fallback |
+| action 非法 | **不重试**；直接 Mock fallback |
+| LLM 预取 | **不做**（须等前序发言写入 `action_log` 后再 `decide`，见 [ADR-006](../adr/006-mock-vs-llm-intent.md)） |
 
 | 角色 | Fallback |
 |------|----------|
@@ -999,7 +1000,17 @@ ws://{host}:{port}/ws/game?token={token}
 }
 ```
 
-`playerSubState`：狼人阶段「等待队友」等 UI 提示用，**不改变** `serverPhase`。
+`playerSubState`：狼人阶段「等待队友」等 UI 提示用，**不改变** `serverPhase`（例：`WAITING_WOLF_CONSENSUS` = 本狼已投 `KILL`，等待其余存活狼人投票或阶段超时按 R10 结算）。
+
+**Web UI 对 `ACTION_ACK` 的义务（MVP，与 §4.8 S-UI-04 一致）**
+
+| 时机 | 要求 |
+|------|------|
+| `success=true` | 须有即时可见反馈（Toast 或等价），文案含操作结果；`NIGHT_WOLF` + `KILL` 成功时提示「已记录刀口 #target，等待狼队一致」类语义，并展示 `playerSubState` |
+| `success=false` | Toast（或顶栏）展示 `message` / `code`（如 `WOLF_CHAT_REQUIRED`）；**不得**仅写入被 UI 过滤掉的日志类型 |
+| 阶段未变 | `serverPhase` 仍为 `NIGHT_WOLF` 时，**不视为**操作失败；UI 须区分「已提交意图」与「阶段已推进」 |
+
+> **实现注记（2026-05-26 联调）**：当前 `frontend/` 仅在 `success=false` 时 Toast；成功时清空选中目标且无提示；`CenterStage` 法官流过滤 `gameLog.type==='action'`，导致成功/部分失败在界面不可见。
 
 `ACTION_ACK` 失败示例（R17a，未先狼队商议即刀狼队友）：
 
@@ -1146,6 +1157,32 @@ ws://{host}:{port}/ws/game?token={token}
 
 `GAME_OVER` 时 `game_record.action_log` 写入完整序列；应用日志同步输出 JSON 行（结构化），字段至少含 `roomId`、`phase`、`playerId`。
 
+### 4.8 Web UI（课题演示，非冻结协议）
+
+> **规格真源：** [frontend-ui-spec.md](../reference/frontend-ui-spec.md)。下列为 PRD 级场景摘要；字段级线框与 WS 对照见该文档。
+
+| ID | 场景 | 验收要点 |
+|----|------|----------|
+| **S-UI-01** | 主页氛围与创建流 | Home（中世纪奇幻）→ Setup 选板 → 创建房间 → 进入对局；MVP 不做 join UI |
+| **S-UI-02** | 12 人左右座位 + 发言高亮 | 左 #1–#6、右 #7–#12；`PHASE_SYNC.currentSpeakerId` 对应座位「发言中」 |
+| **S-UI-03** | 阶段驱动中间区与信息隔离 | 夜：法官宣读/死讯；日：公频聊天；狼频道 Tab 与公频分离 |
+| **S-UI-04** | 狼夜 `KILL` 与 `ACTION_ACK` 反馈 | 见下表 |
+
+**S-UI-04 验收要点（狼人真人刀人「像没反应」类问题）**
+
+| # | 条件 | UI 预期 |
+|---|------|---------|
+| 1 | `NIGHT_WOLF` 且 `canAct`，选中存活非己目标后点「击杀」 | 发送 `GAME_ACTION`/`KILL`；**成功**后保留或回显已选刀口 #N，并 Toast「已记录刀口，等待狼队一致」等（对应 `playerSubState=WAITING_WOLF_CONSENSUS`） |
+| 2 | 同上，但 `serverPhase` 仍为 `NIGHT_WOLF` | **不**提示「操作失败」；顶栏倒计时继续；直至齐票或 30s 阶段超时（R10）后收到新 `PHASE_SYNC` |
+| 3 | 刀存活狼人（含自刀）且 `wolfChatInPhase=false` | `ACTION_ACK` 失败 `WOLF_CHAT_REQUIRED`；Toast + 事件区可见「须先狼频道商议」；引导使用狼频道 Tab / `WOLF_CHAT` |
+| 4 | 任意夜间/白天操作 | 法官区或专用「操作记录」展示 `ACTION_ACK` 摘要（成功/失败），**不得**仅依赖后端日志 |
+
+**建房 `boardType`（接口预留）：**
+
+- `POST /api/room` 可选 body 字段 `boardType`，枚举 MVP 仅 `STANDARD_12_PRYH_IDIOT`（预女猎白 · 12 人）
+- 响应回显 `boardType`；**规则引擎仍固定单板**，未知值 HTTP 400
+- 默认 `aiCount: 11`（1 真人 + 11 AI）
+
 ---
 
 ## 5. 非功能需求
@@ -1154,7 +1191,7 @@ ws://{host}:{port}/ws/game?token={token}
 |------|------|----------|
 | JDK 与线程模型 | **Java 21**；`spring.threads.virtual.enabled=true`；阻塞 I/O 用虚拟线程载体；**阶段推进禁止忙等**（须调度器 / 单次延迟任务） | 代码审查 + 配置检查 |
 | 阶段切换延迟 | < 500ms（不含 LLM） | 日志打点 |
-| AI 单次调用 | < 3s（云端 P95） | AIService 计时 |
+| AI 单次调用 | < **6s**（云端 P95；含重试时单座最坏约 18s） | AIService 计时 |
 | 消息投递 | 同房间不串房、不丢 `PHASE_SYNC` | 12 Bot 断言 |
 | 状态一致性 | 同 phase 无并发写冲突 | 100 局无状态异常 |
 | 可用性 | 单实例；重启可丢进行中局 | 文档约定 |
@@ -1268,7 +1305,7 @@ sequenceDiagram
 - 语言：Python 3.11+（推荐）或 Node.js
 - 依赖：`websocket-client`, `requests`
 - 职责：模拟 1～12 玩家；**不实现**游戏规则，只按 `PHASE_SYNC` 发 `GAME_ACTION`
-- 仓库位置：**已冻结**——本仓库 **`bot/`** 子目录
+- 仓库位置：**已冻结**——本仓库 **`scripts/`** 子目录（原 `bot/` 已合并）
 
 ---
 
@@ -1368,7 +1405,7 @@ com.werewolfengine
 
 | PRD 条目 | 实现状态 | 说明 |
 |----------|----------|------|
-| §8.2 Day4 五项 | **已通过**（2026-05-25） | `bot/run_day4_formal.py` 10/10 |
+| §8.2 Day4 五项 | **已通过**（2026-05-25） | `scripts/formal/run_day4_formal.py` 10/10 |
 | §7.3 B：WS + 建房 + `PHASE_SYNC` | **P0 完成** | 定向推送；MVP 向已连接座广播裁剪 sync |
 | Formal Mock/AI 整局 | **是** | `POST /api/room/.../phase-tick` + `GamePhaseScheduler` |
 | `PHASE_SYNC.countdown` | **已实现**（2026-05-25） | ADR-005 P-05；联调见 [gateway-integration §6](../reference/gateway-integration.md) |
@@ -1388,7 +1425,7 @@ com.werewolfengine
 |------|------|------|--------|
 | AI JSON 不稳定 | 卡住阶段 | Prompt 约束 + fallback + 不广播 thinking | A |
 | 狼人并发刀口冲突 | 状态错误 | 阶段内收集后一次结算（R10） | A |
-| LLM 延迟 | 体验差 | 3s 超时；阶段总超时兜底 | A |
+| LLM 延迟 | 体验差 | **6s** 超时 + 解析最多重试 2 次；阶段总超时兜底 | A |
 | WS 断线 | 缺人操作 | Redis 映射 + 重连 + 默认操作 | B |
 | 协议中途变更 | 全员返工 | Day7 冻结 | 全员 |
 | Spring Boot 版本不一致 | 依赖问题 | **已冻结**：父 POM **4.0.6** + Java **21**（见根 `pom.xml`） | 全员 |
@@ -1503,6 +1540,8 @@ com.werewolfengine
 | v1.0.13 | 2026-05-18 | **§4.5.1 Memory**：SeatMemory 投影（[ADR-004](../adr/004-ai-seat-memory.md)）。**不改变** v1.0.0 协议/规则冻结 |
 | v1.0.14 | 2026-05-18 | **文档**：`docs/README` 索引；子目录 `architecture/`、`progress/`、`reference/`。**不改变** 规则/协议冻结 |
 | v1.0.15 | 2026-05-25 | **§8.5 实现对照**；链 [status](status.md)、[ADR-005](../adr/005-gateway-formal-path.md)、[adr/README](../adr/README.md)。**不改变** 规则/协议冻结 |
+| v1.0.16 | 2026-05-26 | **§4.8 S-UI-04**、§2.2、`ACTION_ACK` Web UI 义务：狼夜 `KILL` 成功/失败反馈与 `WAITING_WOLF_CONSENSUS` 展示；**不改变** v1.0.0 协议/规则冻结 |
+| v1.0.17 | 2026-05-26 | **§4.5.4**：LLM 单次调用超时 **3s→6s**；JSON 解析失败**重试 0→最多 2 次**；明确**不做 LLM 预取**（前序发言须先入 `action_log`） |
 
 ---
 

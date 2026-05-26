@@ -58,4 +58,57 @@ class AiIntentParserTest {
         String json = AiIntentParser.extractJson("Here: {\"action\":\"VOTE\",\"target\":3}");
         assertThat(json).contains("\"action\":\"VOTE\"");
     }
+
+    @Test
+    void parsesDeepSeekReasoningPseudoJson() {
+        PlayerIntent intent = parser.parse("""
+                :"第一夜作为预言家，选择查验三号。"
+                action:"CHECK"
+                target:3
+                reason:"首夜验3"
+                content:""
+                """);
+        assertThat(intent.action()).isEqualTo(GameActionType.CHECK);
+        assertThat(intent.target()).isEqualTo(3);
+        assertThat(intent.thinking()).contains("预言家");
+    }
+
+    @Test
+    void parsesReasoningWithUnquotedAction() {
+        PlayerIntent intent = parser.parse("""
+                :"女巫首夜救人。"
+                action:SAVE
+                target:4
+                reason:"首夜刀4"
+                content:""
+                """);
+        assertThat(intent.action()).isEqualTo(GameActionType.SAVE);
+        assertThat(intent.target()).isEqualTo(4);
+    }
+
+    @Test
+    void parsesPartialJsonWithQuotedKeys() {
+        // Leading `":"` as returned in DeepSeek reasoning_content (not `:"`)
+        PlayerIntent intent = parser.parse("""
+                "":"首夜验人，无需信息，随机抽取查验。",
+                "action":"CHECK",
+                "target":5,
+                "reason":"查5号身份",
+                "content":""
+                }
+                """);
+        assertThat(intent.action()).isEqualTo(GameActionType.CHECK);
+        assertThat(intent.target()).isEqualTo(5);
+        assertThat(intent.reason()).contains("查5");
+    }
+
+    @Test
+    void normalizeRepairsLeadingThinkingFragment() {
+        String json = AiIntentParser.normalizeLlmPayload("""
+                :"思考"
+                action:SKIP
+                """);
+        assertThat(json).startsWith("{\"thinking\"");
+        assertThat(json).contains("\"action\":\"SKIP\"");
+    }
 }

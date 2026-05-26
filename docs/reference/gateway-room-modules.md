@@ -72,7 +72,13 @@ TCP 连接建立
 | `userId` | 从 token 解析 | 未实现 | P1 鉴权 |
 | `sessionId` | 未定义 | **已返回** | 可保留为调试字段，不替代 `userId` |
 
-### 2.2 `JOIN_ROOM`
+### 2.2 建房 `hostUserId`（Web UI）
+
+- `POST /api/room` body 建议带 **`hostUserId`**（真人房主账号）与 **`aiCount`**（如 11 = 1 人 + 11 AI）。
+- 服务端在 `hostUserId != null` 时 **自动 `joinRoom` 占 #1 座**，减少仅依赖 WS `JOIN_ROOM` 的竞态。
+- `POST /api/room/{id}/start` 须传 **`userId`**（body 或 `X-User-Id` header）与建房时 `hostUserId` 一致，否则 403。
+
+### 2.3 `JOIN_ROOM`
 
 **PRD**：payload 必填 `roomId`；服务端分配或确认 `playerId`。
 
@@ -84,12 +90,12 @@ TCP 连接建立
 
 **开局后**：仅 `roomId` + `seatId` 绑定 WS，勿再带 `userId` 调 join（`RoomService` 会拒绝）。
 
-### 2.3 `READY`
+### 2.4 `READY`
 
 - WS：payload 需 `roomId`、`seatId`、`ready`（当前 handler 已校验）。
 - HTTP：`POST /api/room/{roomId}/ready`，body `{ "seatId", "ready" }`。
 
-### 2.4 `GAME_ACTION`
+### 2.5 `GAME_ACTION`
 
 经 `MessageRouter` → `GameEngineService.submitAction`：
 
@@ -186,7 +192,7 @@ TCP 连接建立
 | 行为 | 进入 `GamePhase` 或讨论/遗言下一发言人时重置 deadline；`remainingSeconds` 写入 `countdown` |
 | `phase-tick` 响应 | 未到期：`status=COUNTDOWN`；到期：超时兜底或 `AI_STEP` / `ADVANCED` / `GAME_OVER` |
 | 正式使用 | 依赖自动调度 + WS；**不**要求客户端高频 HTTP tick |
-| 联调 | `scripts/countdown-observe.py`；`formal-path-smoke` 末项在 countdown 下可能失败，见 [gateway-integration §6](gateway-integration.md) |
+| 联调 | `scripts/formal/countdown_observe.py`；`formal_path_smoke` 末项在 countdown 下可能失败，见 [gateway-integration §6](gateway-integration.md) |
 
 ---
 

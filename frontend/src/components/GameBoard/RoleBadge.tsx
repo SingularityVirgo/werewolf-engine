@@ -1,5 +1,5 @@
 import React from 'react';
-import { Role, RoleNames, RoleEmojis } from '../../types/game';
+import { Role, RoleNames } from '../../types/game';
 
 interface RoleBadgeProps {
   role: Role | null;
@@ -8,18 +8,18 @@ interface RoleBadgeProps {
 }
 
 const sizeClasses = {
-  sm: 'text-xs px-2 py-0.5',
-  md: 'text-sm px-3 py-1',
-  lg: 'text-base px-4 py-1.5',
+  sm: 'text-label px-2 py-0.5',
+  md: 'text-body px-2.5 py-0.5',
+  lg: 'text-body px-3 py-1',
 };
 
 const roleColors: Record<Role, string> = {
-  [Role.WEREWOLF]: 'bg-wolf/30 text-red-300 border-red-700',
-  [Role.VILLAGER]: 'bg-villager/30 text-green-300 border-green-700',
-  [Role.SEER]: 'bg-seer/30 text-blue-300 border-blue-700',
-  [Role.WITCH]: 'bg-witch/30 text-purple-300 border-purple-700',
-  [Role.HUNTER]: 'bg-hunter/30 text-orange-300 border-orange-700',
-  [Role.IDIOT]: 'bg-idiot/30 text-yellow-300 border-yellow-700',
+  [Role.WEREWOLF]: 'bg-wolf/20 text-text-primary border-wolf/50',
+  [Role.VILLAGER]: 'bg-villager/20 text-text-primary border-villager/50',
+  [Role.SEER]: 'bg-seer/20 text-text-primary border-seer/50',
+  [Role.WITCH]: 'bg-witch/20 text-text-primary border-witch/50',
+  [Role.HUNTER]: 'bg-hunter/20 text-text-primary border-hunter/50',
+  [Role.IDIOT]: 'bg-idiot/20 text-text-primary border-idiot/50',
 };
 
 export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, showName = true, size = 'sm' }) => {
@@ -27,9 +27,8 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, showName = true, siz
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border ${roleColors[role]} ${sizeClasses[size]} font-semibold`}
+      className={`inline-flex items-center rounded-md border font-medium ${roleColors[role]} ${sizeClasses[size]}`}
     >
-      <span>{RoleEmojis[role]}</span>
       {showName && <span>{RoleNames[role]}</span>}
     </span>
   );

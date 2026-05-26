@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Lobby } from './components/Lobby/Lobby';
+import { HomePage } from './pages/HomePage';
+import { SetupPage } from './pages/SetupPage';
 import { GamePage } from './components/GamePage';
 
-type Screen = 'lobby' | 'game';
+type Screen = 'home' | 'setup' | 'game';
 
 interface GameConfig {
   roomId: string;
@@ -12,7 +13,7 @@ interface GameConfig {
 }
 
 const App: React.FC = () => {
-  const [screen, setScreen] = useState<Screen>('lobby');
+  const [screen, setScreen] = useState<Screen>('home');
   const [gameConfig, setGameConfig] = useState<GameConfig | null>(null);
 
   const handleEnterGame = (roomId: string, seatId: number, userId: number, isOwner: boolean) => {
@@ -20,9 +21,9 @@ const App: React.FC = () => {
     setScreen('game');
   };
 
-  const handleBackToLobby = () => {
+  const handleBackToHome = () => {
     setGameConfig(null);
-    setScreen('lobby');
+    setScreen('home');
   };
 
   if (screen === 'game' && gameConfig) {
@@ -32,12 +33,21 @@ const App: React.FC = () => {
         seatId={gameConfig.seatId}
         userId={gameConfig.userId}
         isOwner={gameConfig.isOwner}
-        onBackToLobby={handleBackToLobby}
+        onBackToHome={handleBackToHome}
       />
     );
   }
 
-  return <Lobby onEnterGame={handleEnterGame} />;
+  if (screen === 'setup') {
+    return (
+      <SetupPage
+        onBack={() => setScreen('home')}
+        onCreated={(roomId, seatId, userId) => handleEnterGame(roomId, seatId, userId, true)}
+      />
+    );
+  }
+
+  return <HomePage onStart={() => setScreen('setup')} />;
 };
 
 export default App;

@@ -1,11 +1,12 @@
 import React from 'react';
-import { PlayerInfo, Role, RoleEmojis, RoleNames } from '../../types/game';
+import { PlayerInfo } from '../../types/game';
 import { RoleBadge } from './RoleBadge';
 
 interface SeatCardProps {
   player: PlayerInfo;
   isMySeat: boolean;
   isSelected: boolean;
+  isSpeaking: boolean;
   selectable: boolean;
   showRole: boolean;
   onClick?: () => void;
@@ -15,6 +16,7 @@ export const SeatCard: React.FC<SeatCardProps> = ({
   player,
   isMySeat,
   isSelected,
+  isSpeaking,
   selectable,
   showRole,
   onClick,
@@ -23,52 +25,55 @@ export const SeatCard: React.FC<SeatCardProps> = ({
 
   return (
     <button
+      type="button"
       className={`
-        relative card flex flex-col items-center justify-center p-3 transition-all duration-200
-        ${!alive ? 'opacity-40 grayscale' : ''}
-        ${isMySeat ? 'ring-2 ring-gold ring-offset-2 ring-offset-night' : ''}
-        ${isSelected ? 'ring-2 ring-blood ring-offset-2 ring-offset-night bg-blood/20' : ''}
-        ${selectable && alive ? 'cursor-pointer hover:bg-gray-800/80 hover:scale-105' : 'cursor-default'}
-        ${!alive ? 'bg-gray-900/40' : ''}
+        seat-tile flex flex-col items-center justify-center min-h-[72px]
+        ${!alive ? 'opacity-50' : ''}
+        ${isMySeat ? 'ring-2 ring-ember ring-offset-1 ring-offset-abyss' : ''}
+        ${isSpeaking && alive ? 'seat-speaking' : ''}
+        ${isSelected ? 'ring-2 ring-blood ring-offset-1 ring-offset-abyss bg-blood/10 border-blood/40' : ''}
+        ${selectable && alive ? 'cursor-pointer hover:border-ember/40 hover:bg-stone' : 'cursor-default'}
       `}
       onClick={selectable && alive ? onClick : undefined}
       disabled={!selectable || !alive}
+      aria-label={`座位 ${seatId}${isSpeaking ? '，发言中' : ''}`}
     >
-      {/* Seat number */}
-      <div className="absolute top-2 left-2 text-xs font-bold text-gray-500">
+      <div className="absolute top-1.5 left-1.5 text-label text-text-muted font-mono tabular-nums">
         #{seatId}
       </div>
 
-      {/* Ready indicator */}
       {ready && alive && (
-        <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+        <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-ember" aria-label="已准备" />
       )}
 
-      {/* Avatar */}
-      <div className={`text-3xl mb-1 ${!alive ? 'grayscale' : ''}`}>
-        {role && showRole ? RoleEmojis[role] : '👤'}
+      <div className={`font-mono text-body font-semibold tabular-nums ${!alive ? 'text-text-muted line-through' : 'text-text-primary'}`}>
+        {seatId}
       </div>
 
-      {/* Player name */}
-      <div className="text-xs font-medium text-gray-300 mb-1">
-        {isHuman ? `玩家${seatId}` : `AI-${seatId}`}
+      <div className="text-label text-text-secondary mt-0.5 truncate max-w-full px-1">
+        {isHuman ? `玩家 ${seatId}` : `AI ${seatId}`}
       </div>
 
-      {/* Role (if revealed) */}
-      {showRole && role && (
-        <RoleBadge role={role} size="sm" />
-      )}
-
-      {/* Death marker */}
-      {!alive && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-4xl font-bold text-blood/60">💀</span>
+      {showRole && role && alive && (
+        <div className="mt-1">
+          <RoleBadge role={role} size="sm" />
         </div>
       )}
 
-      {/* My seat indicator */}
-      {isMySeat && (
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-gold text-night text-xs font-bold px-2 py-0.5 rounded-full">
+      {isSpeaking && alive && (
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-ember text-abyss text-label font-semibold px-2 py-0.5 rounded-md whitespace-nowrap">
+          发言中
+        </div>
+      )}
+
+      {!alive && (
+        <div className="absolute inset-0 flex items-center justify-center bg-abyss/70 rounded-lg">
+          <span className="text-label font-semibold text-blood uppercase tracking-wider">出局</span>
+        </div>
+      )}
+
+      {isMySeat && alive && !isSpeaking && (
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-ember text-abyss text-label font-semibold px-2 py-0.5 rounded-md">
           我
         </div>
       )}

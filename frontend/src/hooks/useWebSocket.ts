@@ -1,16 +1,60 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { WsClient } from '../services/ws';
-import { WsEnvelope, MessageType, PhaseSyncPayload, ActionAckPayload, GameOverPayload, ChatMessagePayload } from '../types/game';
-
+import {
+  WsEnvelope,
+  MessageType,
+  PhaseSyncPayload,
+  ActionAckPayload,
+  GameOverPayload,
+  ChatMessagePayload,
+  GameEventPayload,
+  GameWinner,
+  Role,
+} from '../types/game';
 
 interface UseWebSocketOptions {
   userId: number;
+  /** When set, JOIN_ROOM is sent automatically after the gateway CONNECTED ack. */
+  roomId?: string;
+  seatId?: number;
+  /** Connect on mount and disconnect on unmount (default true). */
+  autoConnect?: boolean;
   onConnected?: () => void;
   onPhaseSync?: (payload: PhaseSyncPayload) => void;
   onActionAck?: (payload: ActionAckPayload) => void;
   onGameOver?: (payload: GameOverPayload) => void;
   onChatMessage?: (payload: ChatMessagePayload) => void;
+  onGameEvent?: (payload: GameEventPayload) => void;
   onError?: (message: string) => void;
+}
+
+function normalizeChatPayload(raw: Record<string, unknown>): ChatMessagePayload {
+  const scope = String(raw.scope ?? 'ALL');
+  const playerId = Number(raw.playerId ?? raw.seatId ?? 0);
+  return {
+    seatId: playerId,
+    content: String(raw.content ?? ''),
+    isWolfChat: scope === 'WEREWOLF',
+  };
+}
+
+function normalizeGameOverPayload(raw: Record<string, unknown>): GameOverPayload {
+  const winnerRaw = String(raw.winner ?? '');
+  const winner =
+    winnerRaw === 'WEREWOLVES' || winnerRaw === GameWinner.WEREWOLVES
+      ? GameWinner.WEREWOLVES
+      : winnerRaw === 'VILLAGERS' || winnerRaw === GameWinner.VILLAGERS
+        ? GameWinner.VILLAGERS
+        : null;
+
+  const roles: Record<number, Role> = {};
+  const players = raw.players as Array<{ playerId: number; role: string }> | undefined;
+  if (Array.isArray(players)) {
+    for (const p of players) {
+      if (p.role) roles[p.playerId] = p.role as Role;
+    }
+  }
+  return { winner: winner ?? GameWinner.VILLAGERS, roles };
 }
 
 export function useWebSocket(options: UseWebSocketOptions) {
@@ -30,27 +74,32 @@ export function useWebSocket(options: UseWebSocketOptions) {
     client.onMessage((envelope: WsEnvelope) => {
       const { type, payload } = envelope;
       const opts = optionsRef.current;
+      const raw = payload as Record<string, unknown>;
 
       switch (type) {
-        case MessageType.CONNECTED:
+        case MessageType.CONNECTED: {
+          const { roomId, seatId } = opts;
+          if (roomId != null && seatId != null) {
+            clientRef.current?.send(MessageType.JOIN_ROOM, {
+              roomId,
+              seatId,
+              userId: opts.userId,
+            });
+          }
           opts.onConnected?.();
           break;
+        }
 
         case MessageType.PHASE_SYNC: {
-          // Backend sends: { type: "PHASE_SYNC", payload: { seatId: N, phaseSync: PhaseSyncPayload } }
-          const phaseSync = (payload as any)?.phaseSync as PhaseSyncPayload | undefined;
+          const phaseSync = raw?.phaseSync as PhaseSyncPayload | undefined;
           if (phaseSync) {
-            // GAME_OVER is detected in useGameState.ts PHASE_SYNC reducer
-            // Backend doesn't send GAME_OVER message separately
             opts.onPhaseSync?.(phaseSync);
           }
           break;
         }
 
-
         case MessageType.ACTION_ACK: {
-          // Backend sends: { type: "ACTION_ACK", payload: { ack: ActionAckPayload, phaseSyncs: [...], actorSeatId: N, actorPhaseSync: {...} } }
-          const ackPayload = (payload as any)?.ack as ActionAckPayload | undefined;
+          const ackPayload = raw?.ack as ActionAckPayload | undefined;
           if (ackPayload) {
             opts.onActionAck?.(ackPayload);
           }
@@ -58,25 +107,28 @@ export function useWebSocket(options: UseWebSocketOptions) {
         }
 
         case MessageType.GAME_OVER:
-          // Backend doesn't currently send GAME_OVER, but handle it just in case
-          opts.onGameOver?.(payload as unknown as GameOverPayload);
+          opts.onGameOver?.(normalizeGameOverPayload(raw));
           break;
 
         case MessageType.CHAT_BROADCAST:
-          // Backend broadcasts CHAT_BROADCAST for SPEAK / WOLF_CHAT actions (both AI and manual)
-          opts.onChatMessage?.(payload as unknown as ChatMessagePayload);
+          opts.onChatMessage?.(normalizeChatPayload(raw));
           break;
 
+        case MessageType.GAME_EVENT: {
+          const eventType = String(raw.eventType ?? raw.type ?? 'UNKNOWN');
+          const data = (raw.data ?? {}) as Record<string, unknown>;
+          opts.onGameEvent?.({ type: eventType, data });
+          break;
+        }
 
         case MessageType.ERROR:
-          opts.onError?.(String((payload as any)?.message || 'Unknown error'));
+          opts.onError?.(String(raw?.message || 'Unknown error'));
           break;
       }
     });
 
     client.connect();
   }, [options.userId]);
-
 
   const disconnect = useCallback(() => {
     clientRef.current?.disconnect();
@@ -109,11 +161,15 @@ export function useWebSocket(options: UseWebSocketOptions) {
     [send]
   );
 
+  const autoConnect = options.autoConnect !== false;
+
   useEffect(() => {
+    if (!autoConnect) return;
+    connect();
     return () => {
-      clientRef.current?.disconnect();
+      disconnect();
     };
-  }, []);
+  }, [autoConnect, connect, disconnect]);
 
   return { connect, disconnect, send, joinRoom, setReady, sendGameAction, client: clientRef };
 }

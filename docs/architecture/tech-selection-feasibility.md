@@ -170,7 +170,7 @@ flowchart TB
 
 **结论**：禁止 **同局内** 多厂商混用（格式与延迟方差大）；角色差异用 **Prompt + temperature**，不用多模型硬切。千问平台上架的 DeepSeek 与官方 API **模型 ID、计费、延迟可能不同**，MVP 统一官方端点，避免 dev/prod 双路径。
 
-**可行性**：中高。成本按局数估算即可（MVP 日活低时费用可忽略）；需 **3s 调用超时 + 规则 fallback**（PRD 已要求）。
+**可行性**：中高。成本按局数估算即可（MVP 日活低时费用可忽略）；需 **6s 调用超时 + JSON 解析最多重试 2 次 + Mock fallback**（PRD v1.0.17 §4.5.4）。
 
 ---
 
@@ -258,7 +258,7 @@ flowchart TB
 | T2 | JDK | **已采用 Java 21**（虚拟线程见 4.1.1） |
 | T3 | WebSocket 风格 | **已冻结**：**原生 WebSocketHandler** |
 | T4 | Redis 缺失时的开发模式 | **已冻结**：本地 Docker Redis；无内存降级开关（见 4.4） |
-| T5 | Bot 仓库位置 | **已冻结**：本仓库 **`bot/`** |
+| T5 | 联调脚本位置 | **已冻结**：本仓库 **`scripts/`**（含 `lib/`、`formal/`、`internal/`） |
 
 ---
 

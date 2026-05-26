@@ -34,6 +34,19 @@ public class ActionLogService {
             ActionAck ack,
             Integer effectiveTarget
     ) {
+        recordPlayerAction(roomId, round, phase, roomForRole, command, ack, effectiveTarget, null);
+    }
+
+    public void recordPlayerAction(
+            String roomId,
+            int round,
+            GamePhase phase,
+            GameRoomState roomForRole,
+            GameActionCommand command,
+            ActionAck ack,
+            Integer effectiveTarget,
+            String modelId
+    ) {
         if (roomId == null || command == null || ack == null || phase == null) {
             return;
         }
@@ -52,7 +65,7 @@ public class ActionLogService {
                 ack.success(),
                 System.currentTimeMillis(),
                 null,
-                null
+                modelId
         ));
     }
 

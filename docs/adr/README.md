@@ -11,7 +11,7 @@
 | 0 | [progress/status.md](../progress/status.md) | 全员 | **实现进度真源**（与 PRD 对照） |
 | 1 | [PRD §0～2](../progress/requirements-mvp-v0.1.md) | 新人 | 冻结范围、场景 |
 | 2a | [001](001-night-skill-pipeline.md) → [002](002-death-bus-and-hunter-flow.md) | A | 夜内管道、死亡总线、猎人 |
-| 2b | [003](003-ai-integration.md) → [004](004-ai-seat-memory.md) | A | AI 编排、座位记忆 |
+| 2b | [003](003-ai-integration.md) → [004](004-ai-seat-memory.md) → [006](006-mock-vs-llm-intent.md) | A | AI 编排、座位记忆、Mock/LLM 排查 |
 | 2c | **[005](005-gateway-formal-path.md)** | B、C | Gateway 决策 + 实现 + 选型 |
 | 3 | [gateway-room-modules](../reference/gateway-room-modules.md) | B、C | 模块图、PRD 实现注记 |
 | 4 | [gateway-integration](../reference/gateway-integration.md) | B、C | 双路径联调 |
@@ -28,6 +28,7 @@
 | [003](003-ai-integration.md) | AI 接入与调度 | `game.orchestration` + `ai` | 已采纳；M1～M3 已落地 |
 | [004](004-ai-seat-memory.md) | 座位记忆投影 | `game.view` + `ai.memory` | 已采纳；已实现 |
 | [005](005-gateway-formal-path.md) | **Formal 路径：推送、tick、串行、选型** | `gateway` + `room` | 已采纳；**P0 已实现**（P1/P2 见文内） |
+| [006](006-mock-vs-llm-intent.md) | **Mock vs LLM 意图、排查、LLM-only 演进** | `ai` | 已采纳；见 §4–5 |
 
 ### 为何不合并 001～004？
 
@@ -51,3 +52,5 @@
 |------|------|------|
 | 1.0 | 2026-05-25 | 初稿；Gateway 合并篇；阅读顺序与 status 对齐 |
 | 1.1 | 2026-05-25 | 删除旧文件名重定向桩 |
+| 1.2 | 2026-05-26 | 新增 ADR-006（Mock vs LLM） |
+| 1.3 | 2026-05-27 | ADR-003/006 对齐 PRD v1.0.17（6s、重试已实现） |

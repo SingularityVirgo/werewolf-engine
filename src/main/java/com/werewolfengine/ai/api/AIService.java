@@ -34,10 +34,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
- * LangChain4j + DeepSeek intent generation (PRD §4.5). Falls back to {@link MockAIPlayer} on
- * timeout, parse error, or illegal action (retry 0).
+ * LangChain4j + DeepSeek intent generation (PRD §4.5). Every AI seat tries LLM first when enabled;
+ * {@link MockAIPlayer} is used only when LLM is off, times out, parse fails after retries, or intent is illegal.
  */
 @Service
 public class AIService {
@@ -52,6 +58,7 @@ public class AIService {
     private final AiLegalActions legalActions;
     private final Optional<ChatModel> chatModel;
     private final Optional<ActionLogService> actionLog;
+    private final ExecutorService llmExecutor;
     private final ConcurrentHashMap<String, AiAgent> agents = new ConcurrentHashMap<>();
 
     public AIService(
@@ -72,37 +79,58 @@ public class AIService {
         this.legalActions = legalActions;
         this.chatModel = Optional.ofNullable(chatModel);
         this.actionLog = Optional.ofNullable(actionLog);
+        this.llmExecutor = Executors.newVirtualThreadPerTaskExecutor();
     }
 
     public Optional<PlayerIntent> decide(GameRoomState room, int playerId) {
+        return decideWithSource(room, playerId).map(DecisionResult::intent);
+    }
+
+    /**
+     * LLM-first for all acting AI seats when {@link AiProperties#isEnabled()} and not {@link AiProperties#isWolvesOnly()}
+     * (or wolf night only in P0.5 mode).
+     */
+    public Optional<DecisionResult> decideWithSource(GameRoomState room, int playerId) {
         if (isHumanSeat(room, playerId)) {
             return Optional.empty();
         }
-        Optional<PlayerIntent> fallback = mockAIPlayer.decide(room, playerId);
-        if (fallback.isEmpty()) {
+        if (legalActions.allowed(room, playerId).isEmpty()) {
             return Optional.empty();
         }
-        // Mock wolf-chat gate must run before LLM can choose KILL (ADR-004 M3 / PRD wolf coordination).
-        if (fallback.get().action() == GameActionType.WOLF_CHAT) {
-            return fallback;
-        }
+
+        Optional<PlayerIntent> mockFallback = mockAIPlayer.decide(room, playerId);
+
         if (!shouldUseLlm(room, playerId)) {
-            return fallback;
+            return mockFallback.map(intent -> new DecisionResult(
+                    intent,
+                    DecisionResult.Source.MOCK_ONLY,
+                    DecisionResult.MOCK_ONLY_MODEL
+            ));
         }
+
         try {
-            PlayerIntent fromLlm = requestLlmIntent(room, playerId);
+            PlayerIntent fromLlm = requestLlmIntentWithRetries(room, playerId);
             if (legalActions.isLegal(room, playerId, fromLlm)) {
                 log.debug("LLM intent room={} seat={} action={}", room.getRoomId(), playerId, fromLlm.action());
                 recordLlmThinking(room, playerId, fromLlm);
-                return Optional.of(fromLlm);
+                return Optional.of(new DecisionResult(
+                        fromLlm,
+                        DecisionResult.Source.LLM,
+                        properties.getModelId()
+                ));
             }
-            log.warn("LLM illegal intent room={} seat={} action={}, using fallback",
+            log.warn("LLM illegal intent room={} seat={} action={}, using mock fallback",
                     room.getRoomId(), playerId, fromLlm.action());
         } catch (Exception e) {
-            log.warn("LLM failed room={} seat={}: {}, using fallback",
+            log.warn("LLM failed room={} seat={}: {}, using mock fallback",
                     room.getRoomId(), playerId, e.toString());
         }
-        return fallback;
+
+        return mockFallback.map(intent -> new DecisionResult(
+                intent,
+                DecisionResult.Source.MOCK_FALLBACK,
+                DecisionResult.MOCK_FALLBACK_MODEL
+        ));
     }
 
     private AiAgent agentFor(GameRoomState room, int playerId) {
@@ -130,7 +158,44 @@ public class AIService {
         return room.getPhase() == GamePhase.NIGHT_WOLF && role == Role.WEREWOLF;
     }
 
+    private PlayerIntent requestLlmIntentWithRetries(GameRoomState room, int playerId) {
+        int maxAttempts = properties.getMaxLlmRetries() + 1;
+        IllegalArgumentException lastParseError = null;
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                return requestLlmIntent(room, playerId);
+            } catch (IllegalArgumentException e) {
+                lastParseError = e;
+                if (attempt == maxAttempts - 1) {
+                    throw e;
+                }
+                log.warn("LLM parse failed for room={} seat={} (attempt {}/{}): {}",
+                        room.getRoomId(), playerId, attempt + 1, maxAttempts, e.getMessage());
+            }
+        }
+        throw lastParseError != null ? lastParseError : new IllegalStateException("LLM parse failed");
+    }
+
     private PlayerIntent requestLlmIntent(GameRoomState room, int playerId) {
+        Future<PlayerIntent> future = llmExecutor.submit(() -> callLlm(room, playerId));
+        try {
+            return future.get(properties.getLlmTimeoutSeconds(), TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            throw new IllegalStateException("LLM timeout after " + properties.getLlmTimeoutSeconds() + "s", e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            if (cause instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new IllegalStateException("LLM call failed", cause);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("LLM call interrupted", e);
+        }
+    }
+
+    private PlayerIntent callLlm(GameRoomState room, int playerId) {
         GameView gameView = GameViews.forSeat(room, playerId);
         GameViewContext view = GameViewContext.from(gameView);
         Set<GameActionType> allowed = legalActions.allowed(room, playerId);

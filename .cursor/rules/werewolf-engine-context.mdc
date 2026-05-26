@@ -15,7 +15,7 @@ alwaysApply: true
 |------|------|
 | 需求 | [progress/requirements-mvp-v0.1.md](docs/progress/requirements-mvp-v0.1.md) |
 | 架构 | [architecture-design-spec](docs/architecture/architecture-design-spec.md) · [tech-selection](docs/architecture/tech-selection-feasibility.md) |
-| ADR | [索引](docs/adr/README.md) · [001](docs/adr/001-night-skill-pipeline.md)～[004](docs/adr/004-ai-seat-memory.md) · **[005 Gateway](docs/adr/005-gateway-formal-path.md)** |
+| ADR | [索引](docs/adr/README.md) · [001](docs/adr/001-night-skill-pipeline.md)～[004](docs/adr/004-ai-seat-memory.md) · **[005 Gateway](docs/adr/005-gateway-formal-path.md)** · [006 Mock/LLM](docs/adr/006-mock-vs-llm-intent.md) |
 | 进度 | [status](docs/progress/status.md) |
 | 参考 | [code-modules](docs/reference/code-modules.md) · [gateway-room-modules](docs/reference/gateway-room-modules.md) · [gateway-integration](docs/reference/gateway-integration.md) · [testing-strategy](docs/reference/testing-strategy.md) |
 | 本地 | [developer-local-setup.md](docs/developer-local-setup.md) |
@@ -29,7 +29,7 @@ alwaysApply: true
 ## 技术栈（已冻结）
 
 - Java 21、Spring Boot 4.0.x、原生 WebSocket、MySQL 8、Redis 7
-- LangChain4j + DeepSeek 官方 API；Week1 Mock 整局为关键路径
+- LangChain4j + DeepSeek 官方 API；LLM **6s** 超时、JSON 解析**最多重试 2 次**（PRD v1.0.17 §4.5.4）；Mock 整局为兜底路径
 
 ## 三人分工
 
@@ -37,7 +37,7 @@ alwaysApply: true
 |------|------|----------|
 | **A** | `game` + `ai` | 3、4.3～4.5、8 |
 | **B** | `gateway` + `room` | 4.2、4.6～4.7、6 |
-| **C** | `bot/` | 2、6.3、8.2 |
+| **C** | `scripts/`（联调/压测） | 2、6.3、8.2 |
 
 ## 冻结范围
 

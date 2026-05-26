@@ -196,6 +196,37 @@ public class GameStateMachine {
         return withRoom(roomId, room -> nightPipeline.nightActions().applyTimedNoActorFallback(room).isPresent());
     }
 
+    /**
+     * {@link GamePhase#NIGHT_WOLF} countdown expired: R10 resolve or random non-wolf kill (PRD §4.3.3, G-06).
+     */
+    public boolean applyTimedWolfPhaseFallback(String roomId) {
+        return withRoom(roomId, room ->
+                nightPipeline.nightActions().forceResolveWolfPhaseOnTimeout(room).isPresent());
+    }
+
+    /**
+     * {@link GamePhase#DAY_VOTE} countdown expired: abstain for all pending voters (PRD §4.3.3 R15), then tally.
+     */
+    public boolean applyTimedDayVoteFallback(String roomId) {
+        return withRoom(roomId, room -> {
+            if (room.getPhase() != GamePhase.DAY_VOTE) {
+                return false;
+            }
+            boolean added = false;
+            for (PlayerState p : room.getPlayers().values()) {
+                if (p.isAlive() && p.isCanVote() && !room.getDayVotes().containsKey(p.getPlayerId())) {
+                    room.getDayVotes().put(p.getPlayerId(), null);
+                    added = true;
+                }
+            }
+            if (!added && !allCanVotePlayersSubmitted(room)) {
+                return false;
+            }
+            resolveDayVote(room, ActionAck.ok("投票阶段超时，未投票视为弃票", room.getPhase(), null));
+            return true;
+        });
+    }
+
     public HandleActionResult advanceDayAnnounce(String roomId) {
         return withRoom(roomId, room -> {
             if (room.getStatus() != RoomStatus.PLAYING) {
@@ -285,12 +316,16 @@ public class GameStateMachine {
                         com.werewolfengine.game.event.OutboundMessage.enqueueChat(
                                 room, "ALL", actor.getPlayerId(), content.trim());
                     }
+                } else {
+                    com.werewolfengine.game.event.OutboundMessage.enqueueChat(
+                            room, "ALL", actor.getPlayerId(), "过");
                 }
                 room.setDiscussIndex(idx + 1);
                 if (room.getDiscussIndex() < order.size()) {
                     room.onActTurnAdvanced();
                 }
-                ActionAck ack = ActionAck.ok("发言已记录", room.getPhase(), null);
+                String ackMsg = command.action() == GameActionType.SPEAK ? "发言已记录" : "已跳过发言";
+                ActionAck ack = ActionAck.ok(ackMsg, room.getPhase(), null);
                 if (room.getDiscussIndex() >= order.size()) {
                     room.getDayVotes().clear();
                     room.setPhase(GamePhase.DAY_VOTE);

@@ -1,5 +1,7 @@
 import React from 'react';
-import { GameWinner, Role, RoleNames, RoleEmojis } from '../../types/game';
+import { GameWinner, Role } from '../../types/game';
+import { RoleBadge } from '../GameBoard/RoleBadge';
+import { OrnatePanel } from '../brand/OrnatePanel';
 
 interface GameOverScreenProps {
   winner: GameWinner | null;
@@ -15,45 +17,58 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
   const isVillagerWin = winner === GameWinner.VILLAGERS;
   const hasWinner = winner !== null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md">
-      <div className="card max-w-lg w-full mx-4 text-center animate-fade-in">
-        {/* Winner announcement */}
-        <div className="mb-6">
-          <div className="text-6xl mb-4">{hasWinner ? (isVillagerWin ? '👑' : '🐺') : '🏁'}</div>
-          <h1 className={`text-3xl font-bold mb-2 ${hasWinner ? (isVillagerWin ? 'text-green-400' : 'text-red-400') : 'text-gold'}`}>
-            {hasWinner ? (isVillagerWin ? '好人阵营获胜！' : '狼人阵营获胜！') : '游戏结束'}
-          </h1>
-          <p className="text-gray-400">
-            {hasWinner ? (isVillagerWin ? '所有狼人已被消灭' : '狼人已占领村庄') : '查看所有玩家身份'}
-          </p>
-        </div>
+  const title = hasWinner
+    ? isVillagerWin
+      ? '好人阵营获胜'
+      : '狼人阵营获胜'
+    : '对局结束';
 
-        {/* Role reveal */}
+  const subtitle = hasWinner
+    ? isVillagerWin
+      ? '所有狼人已被消灭'
+      : '狼人已占领村庄'
+    : '身份揭晓';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-abyss/92">
+      <OrnatePanel tone="parchment" className="max-w-lg w-full mx-4 animate-fade-in">
+        <header className="text-center mb-8 space-y-3 pt-2">
+          <p className="text-label text-text-muted uppercase tracking-[0.2em]">裁决</p>
+          <h1
+            className={`font-display text-display font-semibold ${
+              hasWinner ? (isVillagerWin ? 'text-ember' : 'text-blood') : 'text-ember'
+            }`}
+          >
+            {title}
+          </h1>
+          <p className="text-body text-text-secondary">{subtitle}</p>
+        </header>
+
         {Object.keys(roles).length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-400 mb-3">所有玩家身份</h3>
+          <div className="mb-8">
+            <h3 className="text-label text-text-muted uppercase tracking-wider mb-4 text-center">
+              身份揭晓
+            </h3>
             <div className="grid grid-cols-4 gap-2">
-              {Object.entries(roles).map(([seatId, role]) => (
-                <div
-                  key={seatId}
-                  className="bg-gray-800/50 rounded-lg p-2 text-center"
-                >
-                  <div className="text-lg">{RoleEmojis[role]}</div>
-                  <div className="text-xs text-gray-400">#{seatId}</div>
-                  <div className="text-xs font-semibold text-gold">{RoleNames[role]}</div>
-                </div>
-              ))}
+              {Object.entries(roles)
+                .sort(([a], [b]) => Number(a) - Number(b))
+                .map(([seatId, role]) => (
+                  <div
+                    key={seatId}
+                    className="bg-stone-surface/80 border border-stone-border rounded-sm p-2 text-center space-y-1"
+                  >
+                    <div className="font-mono text-label text-text-muted tabular-nums">#{seatId}</div>
+                    <RoleBadge role={role} size="sm" />
+                  </div>
+                ))}
             </div>
           </div>
         )}
 
-        {/* Back button */}
-        <button className="btn-primary" onClick={onBackToLobby}>
+        <button type="button" className="btn-primary w-full" onClick={onBackToLobby}>
           返回大厅
         </button>
-      </div>
+      </OrnatePanel>
     </div>
   );
 };
-

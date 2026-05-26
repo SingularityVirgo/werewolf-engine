@@ -115,9 +115,9 @@ Base: `http://localhost:8080/internal/game`（无鉴权，仅 dev）
 
 ---
 
-## 4. Bot（C）— `bot/` 目录
+## 4. 联调脚本（C）— `scripts/` 目录
 
-见 [bot/README.md](../../bot/README.md) 与 [bot-load-test](bot-load-test.md)。
+见 [scripts/README.md](../../scripts/README.md) 与 [bot-load-test](bot-load-test.md)。
 
 1. 建房 / 开局（路径 B）或 internal 建房（路径 A）
 2. 路径 A：循环 `phase-tick`；路径 B：`phase-tick` 或收推送 `PHASE_SYNC` 后 `GAME_ACTION`
@@ -167,12 +167,12 @@ Base: `http://localhost:8080/internal/game`（无鉴权，仅 dev）
 
 | 脚本 | 用途 |
 |------|------|
-| `scripts/countdown-observe.py` | 建房 + WS 订阅约 35s，打印 `phase` / `countdown` 样本；**推荐验收 P-05** |
-| `scripts/formal-path-smoke.py` | Formal 全链路；在 countdown 开启时可能 **7/8**（末项 `phase-tick → GAME_OVER` 因短时不等待墙钟），**不表示**正式环境故障，见 [ADR-005 §14.1](../adr/005-gateway-formal-path.md) |
+| `scripts/formal/countdown_observe.py` | 建房 + WS 订阅约 35s，打印 `phase` / `countdown` 样本；**推荐验收 P-05** |
+| `scripts/formal/formal_path_smoke.py` | Formal 全链路；在 countdown 开启时可能 **7/8**（末项 `phase-tick → GAME_OVER` 因短时不等待墙钟），**不表示**正式环境故障，见 [ADR-005 §14.1](../adr/005-gateway-formal-path.md) |
 
 ```bash
 # 示例（服务已启动且为最新构建）
-python scripts/countdown-observe.py
+python scripts/formal/countdown_observe.py
 # 可选：WERWOLF_BASE_URL / WERWOLF_WS_URL
 ```
 

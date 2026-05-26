@@ -1,24 +1,16 @@
 import React, { useRef, useEffect } from 'react';
-import { GameLogEntry, GamePhase, PhaseNames } from '../../types/game';
+import { GameLogEntry } from '../../types/game';
 
 interface EventTimelineProps {
   entries: GameLogEntry[];
 }
 
-const typeColors: Record<string, string> = {
-  system: 'text-gray-400',
-  action: 'text-green-400',
-  death: 'text-red-400',
-  vote: 'text-yellow-400',
-  event: 'text-blue-400',
-};
-
-const typeIcons: Record<string, string> = {
-  system: '⚙️',
-  action: '🎯',
-  death: '💀',
-  vote: '🗳️',
-  event: '📌',
+const typeStyles: Record<string, string> = {
+  system: 'text-text-muted',
+  action: 'text-text-secondary',
+  death: 'text-blood',
+  vote: 'text-gold-muted',
+  event: 'text-text-secondary',
 };
 
 export const EventTimeline: React.FC<EventTimelineProps> = ({ entries }) => {
@@ -29,16 +21,20 @@ export const EventTimeline: React.FC<EventTimelineProps> = ({ entries }) => {
   }, [entries]);
 
   return (
-    <div className="card">
-      <h3 className="text-sm font-semibold text-gray-400 mb-2">📜 游戏日志</h3>
-      <div className="max-h-48 overflow-y-auto space-y-1">
+    <div className="panel">
+      <h3 className="text-label text-text-muted uppercase tracking-wider mb-3">事件日志</h3>
+      <div className="max-h-48 overflow-y-auto space-y-2">
         {entries.length === 0 && (
-          <p className="text-gray-600 text-xs text-center py-4">暂无日志</p>
+          <p className="text-label text-text-muted text-center py-6">暂无记录</p>
         )}
         {entries.map((entry) => (
-          <div key={entry.id} className="flex items-start gap-2 text-xs">
-            <span className="flex-shrink-0">{typeIcons[entry.type] || '📄'}</span>
-            <span className={typeColors[entry.type] || 'text-gray-400'}>
+          <div key={entry.id} className="flex items-start gap-2 text-label">
+            {entry.round > 0 && (
+              <span className="font-mono text-text-muted tabular-nums shrink-0 w-8">
+                R{entry.round}
+              </span>
+            )}
+            <span className={typeStyles[entry.type] || 'text-text-muted'}>
               {entry.message}
             </span>
           </div>

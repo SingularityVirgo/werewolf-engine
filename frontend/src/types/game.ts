@@ -176,6 +176,7 @@ export interface CreateRoomResponse {
   status: string;
   phase: string;
   round: number;
+  boardType?: string;
 }
 
 export interface JoinRoomResponse {

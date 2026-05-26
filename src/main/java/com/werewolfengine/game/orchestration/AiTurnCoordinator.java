@@ -1,6 +1,7 @@
 package com.werewolfengine.game.orchestration;
 
 import com.werewolfengine.ai.api.AIService;
+import com.werewolfengine.ai.api.DecisionResult;
 import com.werewolfengine.ai.api.PlayerIntent;
 import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.model.ActionAck;
@@ -61,11 +62,11 @@ public class AiTurnCoordinator {
         }
         int playerId = actorId.get();
         GameRoomState fresh = stateMachine.getRoom(roomId).orElse(room);
-        Optional<PlayerIntent> intent = aiService.decide(fresh, playerId);
-        if (intent.isEmpty()) {
+        Optional<DecisionResult> decision = aiService.decideWithSource(fresh, playerId);
+        if (decision.isEmpty()) {
             return false;
         }
-        PlayerIntent in = intent.get();
+        PlayerIntent in = decision.get().intent();
         int round = fresh.getRound();
         GamePhase phase = fresh.getPhase();
         Integer effectiveTarget = effectiveLogTarget(fresh, in.action(), in.target());
@@ -79,7 +80,8 @@ public class AiTurnCoordinator {
         GameStateMachine.HandleActionResult result = stateMachine.handleAction(roomId, cmd);
         GameRoomState after = stateMachine.getRoom(roomId).orElse(fresh);
         ActionAck ack = result.ack();
-        actionLog.recordPlayerAction(roomId, round, phase, after, cmd, ack, effectiveTarget);
+        actionLog.recordPlayerAction(
+                roomId, round, phase, after, cmd, ack, effectiveTarget, decision.get().modelId());
         return true;
     }
 

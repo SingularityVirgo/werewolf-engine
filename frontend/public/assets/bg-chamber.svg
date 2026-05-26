@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" fill="none" aria-hidden="true">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.12"/>
+      <stop offset="45%" stop-color="#1a1814" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="55%" stop-color="#0d1210" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0d1210" stop-opacity="0.92"/>
+    </radialGradient>
+    <linearGradient id="arch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a251c"/>
+      <stop offset="100%" stop-color="#0d1210"/>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="900" fill="#0d1210"/>
+  <rect width="1440" height="900" fill="url(#glow)"/>
+  <!-- stone arch silhouette -->
+  <path d="M0 900V520c0-180 320-280 720-280s720 100 720 280v380H0Z" fill="url(#arch)" opacity="0.85"/>
+  <path d="M120 900V580c0-120 260-200 600-200s600 80 600 200v320H120Z" fill="#1a1814" opacity="0.6"/>
+  <!-- candles -->
+  <g opacity="0.9">
+    <rect x="380" y="340" width="8" height="48" rx="2" fill="#3d3629"/>
+    <ellipse cx="384" cy="332" rx="10" ry="14" fill="#c9a227" opacity="0.55"/>
+    <rect x="720" y="300" width="10" height="56" rx="2" fill="#3d3629"/>
+    <ellipse cx="725" cy="290" rx="12" ry="16" fill="#c9a227" opacity="0.7"/>
+    <rect x="1060" y="360" width="8" height="44" rx="2" fill="#3d3629"/>
+    <ellipse cx="1064" cy="352" rx="9" ry="13" fill="#c9a227" opacity="0.45"/>
+  </g>
+  <!-- mist bands -->
+  <ellipse cx="720" cy="680" rx="520" ry="80" fill="#8a9a8e" opacity="0.04"/>
+  <ellipse cx="480" cy="720" rx="360" ry="60" fill="#8a9a8e" opacity="0.03"/>
+  <rect width="1440" height="900" fill="url(#vignette)"/>
+</svg>

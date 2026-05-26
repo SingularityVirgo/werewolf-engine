@@ -38,6 +38,12 @@ public class GamePhaseScheduler {
             return TickResult.gameOver(room.getWinner() != null ? room.getWinner().name() : "");
         }
         if (PhaseCountdown.isEnabled() && PhaseCountdown.hasTimer(phase) && !PhaseCountdown.isExpired(room)) {
+            if (isPlayerPhase(phase)) {
+                boolean stepped = turnCoordinator.tickOneStep(roomId, room);
+                if (stepped) {
+                    return TickResult.aiStep(phase.name());
+                }
+            }
             return TickResult.countdown(phase.name());
         }
         if (PhaseCountdown.isEnabled()

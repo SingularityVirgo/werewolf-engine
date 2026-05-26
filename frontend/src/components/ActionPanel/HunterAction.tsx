@@ -12,15 +12,15 @@ export const HunterAction: React.FC<HunterActionProps> = ({
   onSkip,
 }) => {
   return (
-    <div className="card space-y-3">
-      <h3 className="text-lg font-bold text-orange-400">🏹 猎人行动</h3>
-      <p className="text-sm text-gray-400">
-        你被击杀！可以开枪带走一名玩家
+    <div className="panel space-y-4">
+      <h3 className="text-title font-semibold text-text-primary">猎人开枪</h3>
+      <p className="text-body text-text-secondary">
+        你被击杀，可以开枪带走一名玩家
       </p>
-      <p className="text-sm text-gray-400">
+      <p className="text-body text-text-secondary">
         {selectedTarget
-          ? `已选择目标: #${selectedTarget}`
-          : '请选择开枪目标'}
+          ? <>目标 <span className="font-mono text-gold">#{selectedTarget}</span></>
+          : '在座位表中选择目标'}
       </p>
       <div className="flex gap-2">
         <button
@@ -28,10 +28,10 @@ export const HunterAction: React.FC<HunterActionProps> = ({
           onClick={onShoot}
           disabled={!selectedTarget}
         >
-          🏹 开枪
+          开枪
         </button>
         <button className="btn-secondary flex-1" onClick={onSkip}>
-          ⏭️ 不开枪
+          不开枪
         </button>
       </div>
     </div>

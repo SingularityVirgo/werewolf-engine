@@ -18,19 +18,20 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'info', duration =
     return () => clearTimeout(timer);
   }, [duration, onDone]);
 
-  const colors = {
-    info: 'border-blue-500 bg-blue-900/80',
-    error: 'border-red-500 bg-red-900/80',
-    success: 'border-green-500 bg-green-900/80',
+  const styles = {
+    info: 'border-night-border bg-night-elevated text-text-primary',
+    error: 'border-blood/50 bg-night-elevated text-blood',
+    success: 'border-gold/30 bg-night-elevated text-gold',
   };
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg border ${colors[type]} backdrop-blur-sm transition-all duration-300 ${
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
-      }`}
+      className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-md border text-body transition-opacity duration-300 ${
+        styles[type]
+      } ${visible ? 'opacity-100' : 'opacity-0'}`}
+      role="status"
     >
-      <p className="text-sm text-white">{message}</p>
+      {message}
     </div>
   );
 };

@@ -1,8 +1,11 @@
 HELP.md
 .env
-bot/action_logs/
 bot/__pycache__/
+bot/action_logs/
+scripts/action_logs/
 scripts/reports/
+scripts/**/__pycache__/
+scripts/lib/__pycache__/
 target/
 
 # Frontend

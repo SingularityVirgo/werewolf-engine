@@ -14,9 +14,11 @@ import com.werewolfengine.game.observability.ActionLogEntry;
 import com.werewolfengine.game.observability.ActionLogService;
 import com.werewolfengine.game.orchestration.AiTurnCoordinator;
 import com.werewolfengine.game.orchestration.GamePhaseScheduler;
+import com.werewolfengine.game.orchestration.GamePhaseScheduler;
 import com.werewolfengine.game.orchestration.MockGameRunner;
 import com.werewolfengine.game.orchestration.PhaseTimeoutHandler;
 import com.werewolfengine.game.orchestration.TurnActorResolver;
+import com.werewolfengine.game.testsupport.GameTestAiSupport;
 import com.werewolfengine.game.sync.PhaseCountdown;
 import com.werewolfengine.game.view.PerceptionEventKind;
 import com.werewolfengine.game.view.SeatPerceptionProjector;
@@ -75,7 +77,7 @@ class AIServiceMemoryIntegrationTest {
         phaseScheduler = new GamePhaseScheduler(
                 stateMachine,
                 coordinator,
-                new PhaseTimeoutHandler(stateMachine, resolver, new MockAIPlayer(), actionLog),
+                new PhaseTimeoutHandler(stateMachine, resolver, aiService, actionLog),
                 actionLog
         );
     }
@@ -88,7 +90,9 @@ class AIServiceMemoryIntegrationTest {
 
         String roomId = "mem_m3b_" + System.nanoTime();
         startRoom(roomId);
-        assertThat(advanceUntil(roomId, r -> r.getRound() >= 2 && r.getPhase() == GamePhase.DAY_DISCUSS))
+        GamePhaseScheduler mockScheduler = GameTestAiSupport.mockOnly(stateMachine, actionLog).phaseScheduler();
+        assertThat(advanceUntil(mockScheduler, roomId,
+                r -> r.getRound() >= 2 && r.getPhase() == GamePhase.DAY_DISCUSS))
                 .isTrue();
 
         GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
@@ -115,7 +119,8 @@ class AIServiceMemoryIntegrationTest {
 
         String roomId = "mem_m3c_" + System.nanoTime();
         startRoom(roomId);
-        assertThat(advanceUntil(roomId, r ->
+        GamePhaseScheduler mockScheduler = GameTestAiSupport.mockOnly(stateMachine, actionLog).phaseScheduler();
+        assertThat(advanceUntil(mockScheduler, roomId, r ->
                 actionLog.getLog(roomId).stream()
                         .anyMatch(e -> e.action() == com.werewolfengine.game.model.GameActionType.WOLF_CHAT)))
                 .isTrue();
@@ -143,7 +148,7 @@ class AIServiceMemoryIntegrationTest {
     void m3d_deadSeatSkipsDecideButStillProjectsPublicDeaths() {
         String roomId = "mem_m3d_" + System.nanoTime();
         startRoom(roomId);
-        assertThat(advanceUntil(roomId, r -> r.getPhase() == GamePhase.DAY_DISCUSS))
+        assertThat(advanceUntil(phaseScheduler, roomId, r -> r.getPhase() == GamePhase.DAY_DISCUSS))
                 .isTrue();
 
         GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
@@ -166,7 +171,7 @@ class AIServiceMemoryIntegrationTest {
         assertThat(stateMachine.startGame(roomId).success()).isTrue();
     }
 
-    private boolean advanceUntil(String roomId, Predicate<GameRoomState> done) {
+    private boolean advanceUntil(GamePhaseScheduler scheduler, String roomId, Predicate<GameRoomState> done) {
         for (int i = 0; i < MockGameRunner.DEFAULT_MAX_STEPS; i++) {
             GameRoomState room = stateMachine.getRoom(roomId).orElseThrow();
             if (done.test(room)) {
@@ -175,15 +180,15 @@ class AIServiceMemoryIntegrationTest {
             if (room.getPhase() == GamePhase.GAME_OVER) {
                 return false;
             }
-            if (!tickOne(roomId)) {
+            if (!tickOne(scheduler, roomId)) {
                 return false;
             }
         }
         return false;
     }
 
-    private boolean tickOne(String roomId) {
-        GamePhaseScheduler.TickResult tick = phaseScheduler.tick(roomId);
+    private boolean tickOne(GamePhaseScheduler scheduler, String roomId) {
+        GamePhaseScheduler.TickResult tick = scheduler.tick(roomId);
         if ("COUNTDOWN".equals(tick.status())) {
             stateMachine.getRoom(roomId).ifPresent(r -> r.setPhaseDeadlineEpochMs(System.currentTimeMillis() - 1));
             tick = phaseScheduler.tick(roomId);

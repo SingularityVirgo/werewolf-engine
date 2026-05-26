@@ -2,10 +2,10 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.0 |
-| 日期 | 2026-05-16 |
+| 版本 | v1.1 |
+| 日期 | 2026-05-27 |
 | 读者 | 后端 / 全栈开发人员、小组技术成员 |
-| 关联 | [PRD v1.0.14](progress/requirements-mvp-v0.1.md)、[技术选型](architecture/tech-selection-feasibility.md)、[架构说明](architecture/architecture-design-spec.md) |
+| 关联 | [PRD v1.0.17](progress/requirements-mvp-v0.1.md)、[技术选型](architecture/tech-selection-feasibility.md)、[架构说明](architecture/architecture-design-spec.md) |
 
 本文档整理 **MVP 工程落地阶段** 中团队曾讨论过的技术疑问与最终决策，并给出 **可复制的本地启动步骤**。若与 PRD 冲突，以 PRD 为准；本文侧重「怎么在本机跑起来」。
 
@@ -43,7 +43,7 @@
 
 | 变量名 | 用途 | 写入方式 |
 |--------|------|----------|
-| `DEEPSEEK_API_KEY` | LangChain4j 调用 DeepSeek | `scripts/set-dev-env.ps1` 或系统「环境变量」面板 |
+| `DEEPSEEK_API_KEY` | LangChain4j 调用 DeepSeek | `scripts/dev/set-dev-env.ps1` 或系统「环境变量」面板 |
 | `SPRING_PROFILES_ACTIVE` | 激活 `dev` profile | 脚本一并写入；未设置时 `application.properties` 默认 `dev` |
 
 `.env` 已列入 [`.gitignore`](../.gitignore)，请勿将真实 Key 提交仓库。
@@ -164,7 +164,9 @@ LLM 相关片段（dev）：
 langchain4j.open-ai.chat-model.api-key=${DEEPSEEK_API_KEY}
 langchain4j.open-ai.chat-model.base-url=https://api.deepseek.com/v1
 langchain4j.open-ai.chat-model.model-name=deepseek-v4-flash
-langchain4j.open-ai.chat-model.timeout=3s
+langchain4j.open-ai.chat-model.timeout=6s
+werewolf.ai.llm-timeout-seconds=6
+werewolf.ai.max-llm-retries=2
 ```
 
 切换为 Pro 模型：仅改 `model-name=deepseek-v4-pro`（或通过后续配置中心 / profile 拆分，须保持单局单模型）。
@@ -195,7 +197,7 @@ langchain4j.open-ai.chat-model.timeout=3s
 | 移除 Ollama / 百炼 dev 分叉 | §1.1、§1.2 | 技术选型 v0.1.5 §4.6 |
 | Docker 仅 MySQL + Redis | §4 | 架构 v1.3 §10.2 |
 | 单局单厂商单模型 | §1.2 | PRD §4.5.6（禁止同局混用多厂商） |
-| LLM 3s 超时 + fallback | `timeout=3s` | PRD 非功能 / §4.5 |
+| LLM 6s 超时 + JSON 重试 + fallback | `timeout=6s`、`max-llm-retries=2` | PRD §4.5.4 / §5 |
 
 ---
 
@@ -211,7 +213,7 @@ A: 环境变量未设置或未重启 IDE；执行 `set-dev-env.ps1` 后重开终
 A: 当前仓库**已移除** Ollama 依赖与 compose 服务；若需恢复须经 PRD 版本评审。Week1 仍可用 **Mock AI**（不调用 LLM）跑通状态机。
 
 **Q: macOS / Linux 开发者怎么办？**  
-A: `docker compose` 命令相同；环境变量改为 `export DEEPSEEK_API_KEY=...`、`export SPRING_PROFILES_ACTIVE=dev`，或写入 `~/.bashrc` / `~/.zshrc`。暂无 bash 版 `set-dev-env` 脚本，可自行对照 `scripts/set-dev-env.ps1` 逻辑。
+A: `docker compose` 命令相同；环境变量改为 `export DEEPSEEK_API_KEY=...`、`export SPRING_PROFILES_ACTIVE=dev`，或写入 `~/.bashrc` / `~/.zshrc`。暂无 bash 版 `set-dev-env` 脚本，可自行对照 `scripts/dev/set-dev-env.ps1` 逻辑。
 
 **Q: 生产环境 Key 怎么管？**  
 A: 使用部署平台密钥注入（K8s Secret、云厂商环境变量等），**不要**把 prod Key 写入 `application-*.properties` 提交 Git；prod profile 可后续单独新增 `application-prod.properties` 模板（仅占位符）。

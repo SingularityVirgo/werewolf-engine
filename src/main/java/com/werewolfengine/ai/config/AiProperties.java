@@ -21,6 +21,12 @@ public class AiProperties {
     /** Recorded on action_log lines when LLM is used (PRD §4.7.3). */
     private String modelId = "deepseek-v4-flash";
 
+    /** Per-call LLM ceiling (PRD v1.0.17 §4.5.4); HTTP client may use the same value via env. */
+    private int llmTimeoutSeconds = 6;
+
+    /** JSON parse failures: retry at most this many times (PRD: 2 -> 3 total parse attempts). */
+    private int maxLlmRetries = 2;
+
     private final Memory memory = new Memory();
 
     public boolean isEnabled() {
@@ -45,6 +51,22 @@ public class AiProperties {
 
     public void setModelId(String modelId) {
         this.modelId = modelId;
+    }
+
+    public int getLlmTimeoutSeconds() {
+        return llmTimeoutSeconds;
+    }
+
+    public void setLlmTimeoutSeconds(int llmTimeoutSeconds) {
+        this.llmTimeoutSeconds = llmTimeoutSeconds;
+    }
+
+    public int getMaxLlmRetries() {
+        return maxLlmRetries;
+    }
+
+    public void setMaxLlmRetries(int maxLlmRetries) {
+        this.maxLlmRetries = maxLlmRetries;
     }
 
     public Memory getMemory() {

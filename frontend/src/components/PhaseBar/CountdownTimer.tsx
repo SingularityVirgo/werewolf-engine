@@ -29,9 +29,9 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ countdown }) => 
   const isUrgent = display <= 10;
 
   return (
-    <div className={`flex items-center gap-2 ${isUrgent ? 'text-blood' : 'text-gray-300'}`}>
-      <span className="text-lg">⏱️</span>
-      <span className={`font-mono text-xl font-bold ${isUrgent ? 'animate-pulse' : ''}`}>
+    <div className={`flex items-baseline gap-1.5 ${isUrgent ? 'text-blood' : 'text-text-secondary'}`}>
+      <span className="text-label uppercase">剩余</span>
+      <span className="font-mono text-title font-semibold tabular-nums">
         {display}s
       </span>
     </div>

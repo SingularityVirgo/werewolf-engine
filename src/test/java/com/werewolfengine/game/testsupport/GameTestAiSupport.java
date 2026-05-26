@@ -40,7 +40,7 @@ public final class GameTestAiSupport {
         PhaseTimeoutHandler timeoutHandler = new PhaseTimeoutHandler(
                 stateMachine,
                 resolver,
-                new MockAIPlayer(),
+                ai,
                 actionLog
         );
         GamePhaseScheduler scheduler = new GamePhaseScheduler(

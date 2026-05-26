@@ -1,10 +1,11 @@
 import React from 'react';
+import { CandleIcon } from '../brand/CandleIcon';
 
-export const Loading: React.FC<{ text?: string }> = ({ text = '加载中...' }) => {
+export const Loading: React.FC<{ text?: string }> = ({ text = '加载中…' }) => {
   return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <div className="w-12 h-12 border-4 border-gold/30 border-t-gold rounded-full animate-spin mb-4" />
-      <p className="text-gray-400 text-sm">{text}</p>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-5 bg-abyss">
+      <CandleIcon size={36} className="text-ember candle-glow" />
+      <p className="text-body text-text-secondary">{text}</p>
     </div>
   );
 };

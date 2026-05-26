@@ -13,7 +13,7 @@
 
 ## 背景
 
-`game` + `ai` 已在内存态跑通整局。2026-05-18 Gateway 仅有 WS 请求-响应；2026-05-25 Formal 路径 B 已完成 **定向推送、房间锁、phase-tick（HTTP/WS/定时）**，并通过 `formal-path-smoke` / `formal-llm-smoke` 验证。
+`game` + `ai` 已在内存态跑通整局。2026-05-18 Gateway 仅有 WS 请求-响应；2026-05-25 Formal 路径 B 已完成 **定向推送、房间锁、phase-tick（HTTP/WS/定时）**，并通过 `scripts/formal/formal_path_smoke.py` / `scripts/formal/formal_llm_smoke.py` 验证。
 
 本篇冻结：**出站语义**、**定时挂接**、**并发边界**、**已落地选型**；不改变 PRD 已冻结的 WS `type` 全集（`PHASE_TICK` 为 dev 扩展，见 §6.2）。
 
@@ -200,18 +200,18 @@ tickOnce → GamePhaseScheduler → AiTurnCoordinator → AIService → SM.handl
 
 ### 14. 验收
 
-#### 14.1 `formal-path-smoke` 与 countdown（实现注记）
+#### 14.1 `formal_path_smoke` 与 countdown（实现注记）
 
 - 脚本在短时间内**连续**调用 `POST .../phase-tick`，在狼人阶段 30s 墙钟未结束前会反复得到 `status=COUNTDOWN`，**不等于**正式环境卡死。
 - **正式对局**依赖 `RoomPhaseTickScheduler`（默认 `werewolf.gateway.phase-tick-enabled=true`）按墙钟 tick + WS 推送；Bot/前端应以 **WS `PHASE_SYNC.countdown`** 为准，HTTP `phase-tick` 仅作联调辅助。
-- 验收 P-05 优先：`python scripts/countdown-observe.py`（需已部署含 P-05 的进程；勿用未重启的旧 8080 实例对照）。
+- 验收 P-05 优先：`python scripts/formal/countdown_observe.py`（需已部署含 P-05 的进程；勿用未重启的旧 8080 实例对照）。
 
 | 脚本 | 路径 | 说明 |
 |------|------|------|
-| `formal-path-smoke.py` | B + Mock AI | 联调项 7/8 常见（见 §14.1）；2026-05-25 曾 8/8（无 countdown 时） |
-| `countdown-observe.py` | B + WS | 观察 `countdown` 递减（推荐验收 P-05） |
+| `scripts/formal/formal_path_smoke.py` | B + Mock AI | 联调项 7/8 常见（见 §14.1）；2026-05-25 曾 8/8（无 countdown 时） |
+| `scripts/formal/countdown_observe.py` | B + WS | 观察 `countdown` 递减（推荐验收 P-05） |
 | `formal-llm-smoke.py` | B + LLM tick | 整局 `GAME_OVER`；`action_log_llm` 依赖 API Key |
-| `bot/run_day4_formal.py` | Day4 五项 | 10/10（2026-05-25） |
+| `scripts/formal/run_day4_formal.py` | Day4 五项 | 10/10（2026-05-25） |
 | `mvnw test` | 含 gateway 单测 | 68 测（2026-05-25） |
 
 ### 15. 风险与技术债
@@ -232,7 +232,7 @@ tickOnce → GamePhaseScheduler → AiTurnCoordinator → AIService → SM.handl
 
 ### 17. 相关代码
 
-`gateway/*`、`room/RoomService.java`、`room/RoomController.java`、`scripts/formal-*-smoke.py`
+`gateway/*`、`room/RoomService.java`、`room/RoomController.java`、`scripts/formal/*_smoke.py`
 
 ---
 

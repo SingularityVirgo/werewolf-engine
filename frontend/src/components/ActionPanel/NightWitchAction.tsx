@@ -20,26 +20,24 @@ export const NightWitchAction: React.FC<NightWitchActionProps> = ({
   onSkip,
 }) => {
   return (
-    <div className="card space-y-3">
-      <h3 className="text-lg font-bold text-purple-400">🧪 女巫行动</h3>
+    <div className="panel space-y-4">
+      <h3 className="text-title font-semibold text-text-primary">女巫行动</h3>
 
       {wolfKillTarget && antidoteLeft > 0 && (
-        <div className="bg-purple-900/30 border border-purple-700 rounded-lg p-3">
-          <p className="text-sm text-purple-200">
-            今晚被狼人击杀的是: <span className="font-bold">#{wolfKillTarget}</span>
+        <div className="bg-night-surface border border-witch/30 rounded-md p-3">
+          <p className="text-body text-text-secondary">
+            今夜刀口：<span className="font-mono font-semibold text-text-primary">#{wolfKillTarget}</span>
           </p>
         </div>
       )}
 
-      <p className="text-sm text-gray-400">
-        {antidoteLeft > 0 ? `💊 解药剩余: ${antidoteLeft}` : '💊 解药已用'}
-        {' | '}
-        {poisonLeft > 0 ? `☠️ 毒药剩余: ${poisonLeft}` : '☠️ 毒药已用'}
+      <p className="text-label text-text-muted">
+        解药 {antidoteLeft > 0 ? '可用' : '已用'} · 毒药 {poisonLeft > 0 ? '可用' : '已用'}
       </p>
 
-      <p className="text-sm text-gray-400">
+      <p className="text-body text-text-secondary">
         {selectedTarget
-          ? `已选择目标: #${selectedTarget}`
+          ? <>毒杀目标 <span className="font-mono text-gold">#{selectedTarget}</span></>
           : '选择目标后使用毒药，或直接救/跳过'}
       </p>
 
@@ -49,17 +47,17 @@ export const NightWitchAction: React.FC<NightWitchActionProps> = ({
           onClick={onSave}
           disabled={!wolfKillTarget || antidoteLeft <= 0}
         >
-          💊 救
+          救
         </button>
         <button
           className="btn-danger flex-1"
           onClick={onPoison}
           disabled={!selectedTarget || poisonLeft <= 0}
         >
-          ☠️ 毒
+          毒
         </button>
         <button className="btn-secondary flex-1" onClick={onSkip}>
-          ⏭️ 跳过
+          跳过
         </button>
       </div>
     </div>

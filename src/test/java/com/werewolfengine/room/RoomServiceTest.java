@@ -58,8 +58,18 @@ class RoomServiceTest {
         RoomService.RoomSnapshot snap = roomService.createRoom(null, 1001L, 11);
         assertThat(snap.aiCount()).isEqualTo(11);
         assertThat(snap.hostUserId()).isEqualTo(1001L);
+        assertThat(snap.humanCount()).isEqualTo(1);
+        assertThat(snap.boardType()).isEqualTo(BoardTypes.STANDARD_12_PRYH_IDIOT);
         assertThat(snap.maxPlayers()).isEqualTo(12);
         assertThat(snap.seats()).hasSize(12);
+        assertThat(snap.seats().get(0).seatId()).isEqualTo(1);
+        assertThat(snap.seats().get(0).userId()).isEqualTo(1001L);
+    }
+
+    @Test
+    void createRoom_rejectsUnknownBoardType() {
+        assertThatThrownBy(() -> roomService.createRoom("r_bad", null, 0, "UNKNOWN"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

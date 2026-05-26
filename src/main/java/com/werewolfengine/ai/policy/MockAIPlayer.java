@@ -105,7 +105,7 @@ public class MockAIPlayer {
         if (p == null || !p.isAlive()) {
             return Optional.empty();
         }
-        if (ThreadLocalRandom.current().nextInt(4) == 0) {
+        if (ThreadLocalRandom.current().nextInt(10) < 7) {
             return Optional.of(new PlayerIntent(
                     GameActionType.SPEAK,
                     null,

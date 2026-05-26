@@ -42,7 +42,7 @@ public class MockGameRunner {
                 continue;
             }
             if ("STUCK".equals(tick.status())) {
-                if (stateMachine.applyTimedNightFallback(roomId)) {
+                if (applyStuckFallback(roomId)) {
                     steps++;
                     continue;
                 }
@@ -69,10 +69,23 @@ public class MockGameRunner {
             stateMachine.getRoom(roomId).ifPresent(r -> r.setPhaseDeadlineEpochMs(System.currentTimeMillis() - 1));
             tick = phaseScheduler.tick(roomId);
         }
-        if ("STUCK".equals(tick.status()) && stateMachine.applyTimedNightFallback(roomId)) {
+        if ("STUCK".equals(tick.status()) && applyStuckFallback(roomId)) {
             tick = phaseScheduler.tick(roomId);
         }
         return !"STUCK".equals(tick.status()) && !"NO_OP".equals(tick.status());
+    }
+
+    /**
+     * SM-level fallbacks when AI coordinator cannot advance (PRD §4.3.3 / G-06).
+     */
+    private boolean applyStuckFallback(String roomId) {
+        if (stateMachine.applyTimedWolfPhaseFallback(roomId)) {
+            return true;
+        }
+        if (stateMachine.applyTimedDayVoteFallback(roomId)) {
+            return true;
+        }
+        return stateMachine.applyTimedNightFallback(roomId);
     }
 
     public record RunResult(

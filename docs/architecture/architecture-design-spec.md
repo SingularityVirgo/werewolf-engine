@@ -2,9 +2,9 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v1.5 |
-| 日期 | 2026-05-18 |
-| 状态 | 与 [PRD v1.0.14](../progress/requirements-mvp-v0.1.md) 及 [技术选型 v0.1.5](tech-selection-feasibility.md) **对齐** |
+| 版本 | v1.6 |
+| 日期 | 2026-05-27 |
+| 状态 | 与 [PRD v1.0.17](../progress/requirements-mvp-v0.1.md) 及 [技术选型 v0.1.5](tech-selection-feasibility.md) **对齐** |
 | 适用范围 | MVP 后端（12 人局、单实例、无消息队列） |
 | 课题 | **AI 狼人杀 — Agent Team 实战**（多智能体协作/对抗 + 对局引擎 + 可观测） |
 
@@ -43,7 +43,7 @@
 ### 2.1 目标
 
 - **服务端权威**：游戏状态仅由 `GameStateMachine` 演进；客户端与 AI 只提交**意图**。
-- **可联调、可压测**：HTTP 建房 + WS 对局；`bot/` 可 12 路并发验证协议与状态机。
+- **可联调、可压测**：HTTP 建房 + WS 对局；`scripts/` 可 12 路并发验证协议与状态机。
 - **可演进**：单实例 MVP 明确边界，多实例 / MQ / 向量库等为后序扩展，不污染首版路径。
 - **课题对齐**：**Agent Team**（每座位独立 Agent + 信息隔离）运行于 **权威状态机** 之上；**结构化日志**贯穿局内操作；观战 UI 为加分项，消费既有推送通道。
 
@@ -360,7 +360,7 @@ flowchart TB
 |------|------|
 | `PromptBuilder` | Base + Persona + Context 拼装 |
 | `GameTools` | 只读查询局况；若需写状态须回调 SM（推荐：**Tools 只读**，写走 SM API） |
-| `AIService` | 超时、重试策略（PRD：JSON 失败重试 0 次）、fallback 与日志 |
+| `AIService` | **6s** 超时；JSON 解析失败**最多重试 2 次**；非法 intent 不重试；Mock fallback 与 `action_log` |
 | `MockAIPlayer` | Week1 无 LLM 跑通闭环 |
 
 ### 9.3 与课题进阶方向的架构预留
@@ -439,10 +439,10 @@ flowchart TB
 
 | 维度 | MVP 设计要点 |
 |------|----------------|
-| 延迟 | 阶段切换不含 LLM 目标 &lt; 500ms（PRD）；LLM P95 &lt; 3s + fallback |
+| 延迟 | 阶段切换不含 LLM 目标 &lt; 500ms（PRD）；LLM 单次 &lt; **6s** + 解析重试 + fallback |
 | 安全 | token 不落日志明文；HTTPS/WSS；最小权限 DB 账号 |
 | 观测 | **课题必达**：`action_log` 全序列 + 结构化日志（`roomId`、`playerId`、`requestId`、`phase`）；`thinking` 仅日志通道 |
-| 测试 | `gateway`/`game` 单元测试 + `bot/` 集成压测（PRD 第 8 章）；S2 纯 AI 局日志可还原 |
+| 测试 | `gateway`/`game` 单元测试 + `scripts/` 集成压测（PRD 第 8 章）；S2 纯 AI 局日志可还原 |
 | 信息隔离 | 定向推送 + `GameView` 裁剪；评审用例覆盖狼/预/女私密字段 |
 
 ---
@@ -485,6 +485,7 @@ flowchart TB
 | v1.3 | 2026-05-16 | LLM 改为 DeepSeek 官方 API；§4.1、§10.2 与 PRD v1.0.4 对齐（后续 PRD 子版本见 requirements-mvp 变更记录） |
 | v1.4 | 2026-05-16 | 引擎窄版 §4.3.8、DeathBus（见 PRD v1.0.11） |
 | v1.5 | 2026-05-18 | §5.3 链 ADR-005 与 gateway-room-modules；追溯 gateway 参考文档 |
+| v1.6 | 2026-05-27 | 对齐 PRD v1.0.17：LLM 6s、解析重试；§9.2 `AIService`、§11 延迟 |
 
 ---
 

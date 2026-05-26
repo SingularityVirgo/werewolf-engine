@@ -41,11 +41,20 @@ public class RoomService {
         this.connectionManager = connectionManager;
     }
 
-    public RoomSnapshot createRoom(String roomId, Long hostUserId, int aiCount) {
+    public RoomSnapshot createRoom(String roomId, Long hostUserId, int aiCount, String boardType) {
+        String resolvedBoard = BoardTypes.resolveOrDefault(boardType);
+        BoardTypes.requireSupported(resolvedBoard);
         GameRoomState room = gameEngine.createRoom(roomId);
-        RoomLobby lobby = new RoomLobby(hostUserId, aiCount);
+        RoomLobby lobby = new RoomLobby(hostUserId, aiCount, resolvedBoard);
         lobbies.put(room.getRoomId(), lobby);
+        if (hostUserId != null) {
+            joinRoom(room.getRoomId(), 1, hostUserId);
+        }
         return snapshot(room.getRoomId());
+    }
+
+    public RoomSnapshot createRoom(String roomId, Long hostUserId, int aiCount) {
+        return createRoom(roomId, hostUserId, aiCount, BoardTypes.STANDARD_12_PRYH_IDIOT);
     }
 
     public SeatSnapshot joinRoom(String roomId, Integer seatId, Long userId) {
@@ -178,6 +187,7 @@ public class RoomService {
                 RoomLobby.MAX_PLAYERS,
                 lobby.aiCount(),
                 lobby.hostUserId(),
+                lobby.boardType(),
                 readyCount,
                 humanCount,
                 seats
@@ -202,6 +212,7 @@ public class RoomService {
             int maxPlayers,
             int aiCount,
             Long hostUserId,
+            String boardType,
             int readyCount,
             int humanCount,
             List<SeatSnapshot> seats

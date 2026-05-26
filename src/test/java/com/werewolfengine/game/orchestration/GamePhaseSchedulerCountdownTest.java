@@ -58,7 +58,21 @@ class GamePhaseSchedulerCountdownTest {
         GamePhaseScheduler.TickResult result = scheduler.tick("r1");
 
         assertThat(result.status()).isEqualTo("COUNTDOWN");
-        verify(turnCoordinator, never()).tickOneStep(eq("r1"), any());
+        verify(turnCoordinator).tickOneStep(eq("r1"), any());
+        verify(phaseTimeoutHandler, never()).applyIfExpired(eq("r1"), any());
+    }
+
+    @Test
+    void tick_returnsAiStepWhenAiActsDuringCountdown() {
+        GameRoomState room = new GameRoomState("r1");
+        room.setPhase(GamePhase.DAY_DISCUSS);
+        when(stateMachine.getRoom("r1")).thenReturn(Optional.of(room));
+        when(turnCoordinator.tickOneStep("r1", room)).thenReturn(true);
+
+        GamePhaseScheduler.TickResult result = scheduler.tick("r1");
+
+        assertThat(result.status()).isEqualTo("AI_STEP");
+        verify(turnCoordinator).tickOneStep("r1", room);
         verify(phaseTimeoutHandler, never()).applyIfExpired(eq("r1"), any());
     }
 

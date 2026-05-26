@@ -29,7 +29,7 @@
 | 范围 | 工具 | 环境 |
 |------|------|------|
 | `GameStateMachine`、规则、DeathBus、遗言 | JUnit 5、AssertJ | 无 Docker；`application.properties` 排除 DB/Redis/LLM |
-| `AIService`、Memory 投影 | 同上 + 可选 `@EnabledIfEnvironmentVariable` LLM 集成测 | |
+| `AIService`、Memory 投影 | 同上 + `AIServiceRetryTest`（解析重试/Mock fallback）+ 可选 LLM 集成测 | |
 | `MockAIFullGameTest` | 内存整局至 `GAME_OVER` | A 路径 P0 |
 
 **命令**：`./mvnw.cmd test`
@@ -48,9 +48,9 @@
 
 | 脚本 | 路径 | 验证 |
 |------|------|------|
-| `auto_play_client.py` | `bot/` | `mock-auto-play` → `GAME_OVER` |
-| `tick_play_client.py` | `bot/` | `phase-tick` 逐步推进 |
-| `export_action_log.py` | `bot/` | `action_log` 完整性 |
+| `auto_play_client.py` | `scripts/internal/` | `mock-auto-play` → `GAME_OVER` |
+| `tick_play_client.py` | `scripts/internal/` | `phase-tick` 逐步推进 |
+| `export_action_log.py` | `scripts/internal/` | `action_log` 完整性 |
 
 **注意**：报告须标注 **路径 A（internal）**，不能替代 Formal WS 验收。
 
@@ -62,8 +62,8 @@
 
 | 脚本 | 路径 | 说明 |
 |------|------|------|
-| `countdown-observe.py` | `scripts/` | WS 订阅约 35s，断言同阶段 `countdown` 递减；**P-05 首选验收** |
-| `formal-path-smoke.py` | `scripts/` | 全链路；countdown 开启时末项可能 7/8，**不**代表正式环境故障，见 [ADR-005 §14.1](../adr/005-gateway-formal-path.md) |
+| `countdown_observe.py` | `scripts/formal/` | WS 订阅约 35s，断言同阶段 `countdown` 递减；**P-05 首选验收** |
+| `formal_path_smoke.py` | `scripts/formal/` | 全链路；countdown 开启时末项可能 7/8，**不**代表正式环境故障，见 [ADR-005 §14.1](../adr/005-gateway-formal-path.md) |
 
 ---
 
@@ -95,15 +95,15 @@
 | Job | 内容 |
 |-----|------|
 | `test` | `mvnw test`（无 Docker） |
-| `ws-smoke` | 可选：启动无 DB profile + `scripts/ws-smoke.py` |
-| `bot-internal` | `auto_play_client.py` 对 dev 环境 |
+| `ws-smoke` | 可选：启动无 DB profile + `scripts/formal/formal_path_smoke.py` |
+| `bot-internal` | `scripts/internal/auto_play_client.py` 对 dev 环境 |
 
 ---
 
 ## 6. 当前缺口（2026-05-18）
 
 - 无 `gateway`/`room` 的 `@SpringBootTest`。
-- Bot README 声称 Day4 全通过，与 Formal 路径不符。
+- Bot README 已合并至 `scripts/README.md`；Day4 以 Formal 路径为准。
 - LLM 集成测依赖环境变量，本地可能 1 失败。
 
 ---

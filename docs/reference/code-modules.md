@@ -45,13 +45,13 @@ ai.* → game.view | game.engine（只读）| game.model
 
 | 功能 | 子包 | 类 | 说明 |
 |------|------|-----|------|
-| **门面** | `ai.api` | `AIService` | `decide(room, seat)` → `PlayerIntent` |
+| **门面** | `ai.api` | `AIService` | `decide` / `requestLlmIntentWithRetries`（解析最多重试 2 次） |
 | **契约** | `ai.api` | `PlayerIntent` | → `GameActionCommand` |
 | **Agent** | `ai.agent` | `AiAgent` | 单座 Persona |
 | **记忆** | `ai.memory` | `MemoryPromptFormatter` | Prompt「本局记忆」段；投影见 `game.view` |
 | **感知** | `ai.perceive` | `GameViewContext` | 委托 `GameViews.forSeat` |
 | **提示词** | `ai.prompt` | `AiPromptBuilder`, `Persona` | 记忆 + 当前局面 + 合法 action |
-| **解析** | `ai.parse` | `AiIntentParser`, `AiActionJson` | LLM → intent（重试 0） |
+| **解析** | `ai.parse` | `AiIntentParser`, `AiActionJson` | LLM → intent；`normalizeLlmPayload` 修 DeepSeek `reasoning_content` |
 | **策略** | `ai.policy` | `MockAIPlayer` | Mock / fallback |
 | **校验** | `ai.guard` | `AiLegalActions` | 合法 action |
 | **工具** | `ai.tools` | `GameTools` | Phase B，主路径未接 |

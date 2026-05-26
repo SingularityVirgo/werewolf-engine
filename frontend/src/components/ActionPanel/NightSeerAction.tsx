@@ -12,12 +12,12 @@ export const NightSeerAction: React.FC<NightSeerActionProps> = ({
   onSkip,
 }) => {
   return (
-    <div className="card space-y-3">
-      <h3 className="text-lg font-bold text-blue-400">🔮 预言家行动</h3>
-      <p className="text-sm text-gray-400">
+    <div className="panel space-y-4">
+      <h3 className="text-title font-semibold text-text-primary">预言家行动</h3>
+      <p className="text-body text-text-secondary">
         {selectedTarget
-          ? `已选择查验目标: #${selectedTarget}`
-          : '请选择一个玩家进行查验'}
+          ? <>查验 <span className="font-mono text-gold">#{selectedTarget}</span></>
+          : '在座位表中选择查验目标'}
       </p>
       <div className="flex gap-2">
         <button
@@ -25,10 +25,10 @@ export const NightSeerAction: React.FC<NightSeerActionProps> = ({
           onClick={onCheck}
           disabled={!selectedTarget}
         >
-          🔍 查验
+          查验
         </button>
         <button className="btn-secondary flex-1" onClick={onSkip}>
-          ⏭️ 跳过
+          跳过
         </button>
       </div>
     </div>
