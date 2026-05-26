@@ -5,9 +5,9 @@ bot/__pycache__/
 scripts/reports/
 target/
 
-# Frontend (werewolf-frontend)
-werewolf-frontend/node_modules/
-werewolf-frontend/dist/
+# Frontend
+frontend/node_modules/
+frontend/dist/
 
 # Local / tooling
 .agents/
