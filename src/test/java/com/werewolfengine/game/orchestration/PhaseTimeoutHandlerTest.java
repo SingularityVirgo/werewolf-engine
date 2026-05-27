@@ -1,5 +1,8 @@
 package com.werewolfengine.game.orchestration;
 
+import com.werewolfengine.ai.policy.MockAIPlayer;
+import com.werewolfengine.game.observability.ActionLogService;
+import com.werewolfengine.game.observability.GameActionRecorder;
 import com.werewolfengine.game.testsupport.GameTestAiSupport;
 import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.model.GamePhase;
@@ -22,11 +25,14 @@ class PhaseTimeoutHandlerTest {
     void setUp() {
         PhaseCountdown.setEnabled(true);
         stateMachine = new GameStateMachine();
+        ActionLogService actionLog = new ActionLogService();
         handler = new PhaseTimeoutHandler(
                 stateMachine,
                 new TurnActorResolver(),
                 GameTestAiSupport.disabledAiService(),
-                null
+                new MockAIPlayer(),
+                actionLog,
+                new GameActionRecorder(stateMachine, actionLog)
         );
     }
 

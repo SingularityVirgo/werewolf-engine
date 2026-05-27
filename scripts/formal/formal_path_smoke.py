@@ -51,7 +51,7 @@ def main() -> int:
     print("=== Formal path B smoke ===\n")
 
     try:
-        room = post("/api/room", {})
+        room = post("/api/room", {"hostUserId": 10001, "aiCount": 11})
         room_id = room["roomId"]
         record("POST /api/room", bool(room_id), room_id)
     except Exception as e:
@@ -59,16 +59,15 @@ def main() -> int:
         return 1
 
     try:
-        for seat in range(1, 13):
-            post(f"/api/room/{room_id}/ready", {"seatId": seat, "ready": True})
-        record("join seat1 + ready x12", True)
+        post(f"/api/room/{room_id}/ready", {"seatId": 1, "ready": True})
+        record("host ready seat1", True)
     except Exception as e:
         record("join seat1 + ready x12", False, str(e))
         return 1
 
     ws_msgs: list[dict] = []
     try:
-        ws = create_connection(WS_URL, timeout=10)
+        ws = create_connection(f"{WS_URL}?token=10001", timeout=10)
         raw = ws.recv()
         msg = json.loads(raw)
         ws_msgs.append(msg)
@@ -100,7 +99,7 @@ def main() -> int:
         ws = None
 
     try:
-        start = post(f"/api/room/{room_id}/start")
+        start = post(f"/api/room/{room_id}/start", {"hostUserId": 10001})
         ok = start.get("success") is True
         record("POST start", ok, str(start.get("phase")))
     except Exception as e:

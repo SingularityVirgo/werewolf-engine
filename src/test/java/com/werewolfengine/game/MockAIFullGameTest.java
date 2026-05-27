@@ -56,7 +56,8 @@ class MockAIFullGameTest {
                 h.mockGameRunner(),
                 actionLog,
                 h.phaseScheduler(),
-                new ChatMessageService()
+                new ChatMessageService(),
+                new com.werewolfengine.game.observability.GameActionRecorder(sm, actionLog)
         );
         String roomId = "mock_facade";
         engine.createDevRoom(roomId);

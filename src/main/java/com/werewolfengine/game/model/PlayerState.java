@@ -10,6 +10,9 @@ public final class PlayerState {
     private boolean canVote = true;
     /** {@code null} = server AI seat (PRD §4.2.3); non-null = human player (S1). */
     private Long humanUserId;
+    private ConnectionState connectionState = ConnectionState.ONLINE;
+    /** Epoch millis when GRACE expires; {@code null} unless {@link #connectionState} is GRACE. */
+    private Long graceDeadlineMs;
 
     public PlayerState(int playerId) {
         this.playerId = playerId;
@@ -67,5 +70,21 @@ public final class PlayerState {
 
     public void setHumanUserId(Long humanUserId) {
         this.humanUserId = humanUserId;
+    }
+
+    public ConnectionState getConnectionState() {
+        return connectionState;
+    }
+
+    public void setConnectionState(ConnectionState connectionState) {
+        this.connectionState = connectionState;
+    }
+
+    public Long getGraceDeadlineMs() {
+        return graceDeadlineMs;
+    }
+
+    public void setGraceDeadlineMs(Long graceDeadlineMs) {
+        this.graceDeadlineMs = graceDeadlineMs;
     }
 }

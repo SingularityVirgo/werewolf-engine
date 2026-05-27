@@ -1,6 +1,7 @@
 package com.werewolfengine.gateway;
 
 import com.werewolfengine.game.engine.GameEngineService;
+import com.werewolfengine.game.persistence.GameOverLifecycleService;
 import com.werewolfengine.game.model.GameActionCommand;
 import com.werewolfengine.message.MessageType;
 import com.werewolfengine.message.payload.ActionAckPayload;
@@ -17,15 +18,18 @@ public class MessageRouter {
     private final GameEngineService gameEngine;
     private final RoomExecutionGuard roomGuard;
     private final WsPushService wsPushService;
+    private final GameOverLifecycleService gameOverLifecycle;
 
     public MessageRouter(
             GameEngineService gameEngine,
             RoomExecutionGuard roomGuard,
-            WsPushService wsPushService
+            WsPushService wsPushService,
+            GameOverLifecycleService gameOverLifecycle
     ) {
         this.gameEngine = gameEngine;
         this.roomGuard = roomGuard;
         this.wsPushService = wsPushService;
+        this.gameOverLifecycle = gameOverLifecycle;
     }
 
     public Map<String, Object> handle(String roomId, String type, Map<String, Object> payload) {
@@ -61,6 +65,7 @@ public class MessageRouter {
             wsPushService.pushPhaseSyncToConnected(roomId);
         }
         wsPushService.flushOutbound(roomId);
+        gameOverLifecycle.finalizeIfGameOver(roomId);
         return envelope(MessageType.ACTION_ACK.name(), ackPayload(roomId, playerId, result.ack(), result.phaseSyncs()));
     }
 

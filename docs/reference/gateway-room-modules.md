@@ -7,7 +7,7 @@
 | 读者 | B（gateway/room）、C（Bot）、A（对接 SM） |
 | 需求真源 | [PRD §4.2、§4.6、§6](../progress/requirements-mvp-v0.1.md) |
 | 决策与实现 | [ADR-005](../adr/005-gateway-formal-path.md) |
-| 执行清单 | [gateway-room-ws-checklist](../gateway-room-ws-checklist.md) |
+| 执行清单 | [gateway-room-ws](../checklists/gateway-room-ws.md) |
 
 本文描述 **实现架构** 与 **PRD 差异注记**；对外字段冻结以 PRD 为准，不得在未走变更流程时把本文当新契约。
 

@@ -3,8 +3,9 @@ package com.werewolfengine.game.orchestration;
 import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.model.GamePhase;
 import com.werewolfengine.game.model.GameRoomState;
-import com.werewolfengine.game.observability.ActionLogService;
+import com.werewolfengine.game.observability.GameActionRecorder;
 import com.werewolfengine.game.sync.PhaseCountdown;
+import com.werewolfengine.gateway.session.DisconnectGraceProcessor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,21 +17,25 @@ public class GamePhaseScheduler {
     private final GameStateMachine stateMachine;
     private final AiTurnCoordinator turnCoordinator;
     private final PhaseTimeoutHandler phaseTimeoutHandler;
-    private final ActionLogService actionLog;
+    private final GameActionRecorder actionRecorder;
+    private final DisconnectGraceProcessor disconnectGraceProcessor;
 
     public GamePhaseScheduler(
             GameStateMachine stateMachine,
             AiTurnCoordinator turnCoordinator,
             PhaseTimeoutHandler phaseTimeoutHandler,
-            ActionLogService actionLog
+            GameActionRecorder actionRecorder,
+            DisconnectGraceProcessor disconnectGraceProcessor
     ) {
         this.stateMachine = stateMachine;
         this.turnCoordinator = turnCoordinator;
         this.phaseTimeoutHandler = phaseTimeoutHandler;
-        this.actionLog = actionLog;
+        this.actionRecorder = actionRecorder;
+        this.disconnectGraceProcessor = disconnectGraceProcessor;
     }
 
     public TickResult tick(String roomId) {
+        disconnectGraceProcessor.processRoom(roomId);
         GameRoomState room = stateMachine.getRoom(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("Room not found: " + roomId));
         GamePhase phase = room.getPhase();
@@ -46,16 +51,13 @@ public class GamePhaseScheduler {
             }
             return TickResult.countdown(phase.name());
         }
-        if (PhaseCountdown.isEnabled()
-                && PhaseCountdown.isExpired(room)
+        if ((!PhaseCountdown.isEnabled() || PhaseCountdown.isExpired(room))
                 && phaseTimeoutHandler.applyIfExpired(roomId, room)) {
             GamePhase after = stateMachine.getRoom(roomId).map(GameRoomState::getPhase).orElse(phase);
             return after != phase ? TickResult.advanced(phase.name()) : TickResult.aiStep(phase.name());
         }
         if (phase == GamePhase.NIGHT_DEATH_ANNOUNCE || phase == GamePhase.EXILE_DEATH_ANNOUNCE) {
-            int round = room.getRound();
-            stateMachine.advanceDayAnnounce(roomId);
-            actionLog.recordSystemEvent(roomId, round, phase, "advanceDayAnnounce", null);
+            actionRecorder.recordAdvanceDayAnnounce(roomId);
             return TickResult.advanced(phase.name());
         }
         if (isPlayerPhase(phase)) {

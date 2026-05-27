@@ -76,9 +76,9 @@
 
 - SM / `DeathBus` 发布领域事件 → Gateway 转 WS；MVP 可先仅靠 `PHASE_SYNC`。
 
-### 7. Redis 会话（P2）
+### 7. Redis 会话与持久化（P-07）
 
-- MVP 内存 `ConnectionManager`；目标 `werewolf:ws:conn:{roomId}:{playerId}` + 30s 重连（[auth-session](../reference/auth-session.md)）。
+- MVP 内存 `ConnectionManager`；目标态见 **[ADR-007](007-persistence-redis-mysql.md)**（`werewolf:ws:conn`、30s grace、MySQL 归档）。
 
 ---
 

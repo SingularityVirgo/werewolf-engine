@@ -1,5 +1,5 @@
 import React from 'react';
-import { GamePhase, Role, PhaseSyncPayload } from '../../types/game';
+import { GamePhase, Role, PhaseSyncPayload, PlayerSubStateValue } from '../../types/game';
 import { NightWolfAction } from './NightWolfAction';
 import { NightSeerAction } from './NightSeerAction';
 import { NightWitchAction } from './NightWitchAction';
@@ -12,6 +12,7 @@ interface ActionPanelProps {
   myRole: Role | null;
   phaseSync: PhaseSyncPayload | null;
   selectedTarget: number | null;
+  playerSubState: PlayerSubStateValue;
   onAction: (action: string, target?: number, content?: string) => void;
 }
 
@@ -30,6 +31,7 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({
   myRole,
   phaseSync,
   selectedTarget,
+  playerSubState,
   onAction,
 }) => {
   if (!phaseSync?.canAct && phase !== GamePhase.DAY_VOTE) {
@@ -44,6 +46,7 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({
             <NightWolfAction
               selectedTarget={selectedTarget}
               wolfChatInPhase={phaseSync?.wolfChatInPhase || false}
+              playerSubState={playerSubState}
               onKill={() => onAction('KILL', selectedTarget || undefined)}
               onWolfChat={(content) => onAction('WOLF_CHAT', undefined, content)}
               onSkip={() => onAction('SKIP')}

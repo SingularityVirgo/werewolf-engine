@@ -1,5 +1,6 @@
 package com.werewolfengine.game.orchestration;
 
+import com.werewolfengine.game.model.ConnectionState;
 import com.werewolfengine.game.model.GamePhase;
 import com.werewolfengine.game.model.GameRoomState;
 import com.werewolfengine.game.model.PlayerState;
@@ -35,7 +36,13 @@ public class TurnActorResolver {
      */
     public boolean isServerAiSeat(GameRoomState room, int playerId) {
         PlayerState p = room.getPlayer(playerId);
-        return p != null && p.getHumanUserId() == null;
+        if (p == null) {
+            return false;
+        }
+        if (p.getHumanUserId() == null) {
+            return true;
+        }
+        return p.getConnectionState() == ConnectionState.AI_HOSTED;
     }
 
     public Optional<Integer> nextAiActor(GameRoomState room) {

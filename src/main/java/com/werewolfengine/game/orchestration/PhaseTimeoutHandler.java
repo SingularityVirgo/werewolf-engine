@@ -3,11 +3,13 @@ package com.werewolfengine.game.orchestration;
 import com.werewolfengine.ai.api.AIService;
 import com.werewolfengine.ai.api.DecisionResult;
 import com.werewolfengine.ai.api.PlayerIntent;
+import com.werewolfengine.ai.policy.MockAIPlayer;
 import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.model.GameActionCommand;
 import com.werewolfengine.game.model.GamePhase;
 import com.werewolfengine.game.model.GameRoomState;
 import com.werewolfengine.game.observability.ActionLogService;
+import com.werewolfengine.game.observability.GameActionRecorder;
 import com.werewolfengine.game.sync.PhaseCountdown;
 import org.springframework.stereotype.Component;
 
@@ -22,25 +24,31 @@ public class PhaseTimeoutHandler {
     private final GameStateMachine stateMachine;
     private final TurnActorResolver turnResolver;
     private final AIService aiService;
+    private final MockAIPlayer mockAIPlayer;
     private final ActionLogService actionLog;
+    private final GameActionRecorder actionRecorder;
 
     public PhaseTimeoutHandler(
             GameStateMachine stateMachine,
             TurnActorResolver turnResolver,
             AIService aiService,
-            ActionLogService actionLog
+            MockAIPlayer mockAIPlayer,
+            ActionLogService actionLog,
+            GameActionRecorder actionRecorder
     ) {
         this.stateMachine = stateMachine;
         this.turnResolver = turnResolver;
         this.aiService = aiService;
+        this.mockAIPlayer = mockAIPlayer;
         this.actionLog = actionLog;
+        this.actionRecorder = actionRecorder;
     }
 
     /**
      * @return true if room state may have changed
      */
     public boolean applyIfExpired(String roomId, GameRoomState room) {
-        if (!PhaseCountdown.isEnabled() || !PhaseCountdown.isExpired(room)) {
+        if (PhaseCountdown.isEnabled() && !PhaseCountdown.isExpired(room)) {
             return false;
         }
         GamePhase phase = room.getPhase();
@@ -96,6 +104,13 @@ public class PhaseTimeoutHandler {
         int seat = actor.get();
         Optional<DecisionResult> decision = aiService.decideWithSource(room, seat);
         if (decision.isEmpty()) {
+            decision = mockAIPlayer.decide(room, seat).map(intent -> new DecisionResult(
+                    intent,
+                    DecisionResult.Source.MOCK_FALLBACK,
+                    DecisionResult.MOCK_FALLBACK_MODEL
+            ));
+        }
+        if (decision.isEmpty()) {
             return false;
         }
         PlayerIntent in = decision.get().intent();
@@ -106,22 +121,10 @@ public class PhaseTimeoutHandler {
                 room.getPhase(),
                 in.content()
         );
-        var result = stateMachine.handleAction(roomId, cmd);
-        if (actionLog != null) {
-            GameRoomState after = stateMachine.getRoom(roomId).orElse(room);
-            actionLog.recordPlayerAction(
-                    roomId,
-                    room.getRound(),
-                    room.getPhase(),
-                    after,
-                    cmd,
-                    result.ack(),
-                    cmd.target(),
-                    decision.get().modelId()
-            );
-        }
+        var result = actionRecorder.recordAndHandle(
+                roomId, room, cmd, decision.get().modelId());
         logSystem(roomId, room, "phaseTimeout:" + in.action(), in.target());
-        return true;
+        return result.ack().success();
     }
 
     private void logSystem(String roomId, GameRoomState room, String event) {

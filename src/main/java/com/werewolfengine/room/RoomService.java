@@ -10,6 +10,8 @@ import com.werewolfengine.gateway.ConnectionManager;
 import com.werewolfengine.gateway.RoomExecutionGuard;
 import com.werewolfengine.gateway.RoomPhaseTickScheduler;
 import com.werewolfengine.gateway.WsPushService;
+import com.werewolfengine.room.persistence.RoomLobbyPersistence;
+import com.werewolfengine.room.persistence.RoomPersistenceException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,21 +27,25 @@ public class RoomService {
     private final WsPushService wsPushService;
     private final RoomPhaseTickScheduler phaseTickScheduler;
     private final ConnectionManager connectionManager;
-    private final Map<String, RoomLobby> lobbies = new ConcurrentHashMap<>();
+    private final RoomLobbyPersistence lobbyPersistence;
 
     public RoomService(
             GameEngineService gameEngine,
             RoomExecutionGuard roomGuard,
             WsPushService wsPushService,
             RoomPhaseTickScheduler phaseTickScheduler,
-            ConnectionManager connectionManager
+            ConnectionManager connectionManager,
+            RoomLobbyPersistence lobbyPersistence
     ) {
         this.gameEngine = gameEngine;
         this.roomGuard = roomGuard;
         this.wsPushService = wsPushService;
         this.phaseTickScheduler = phaseTickScheduler;
         this.connectionManager = connectionManager;
+        this.lobbyPersistence = lobbyPersistence;
     }
+
+    private final Map<String, RoomLobby> lobbies = new ConcurrentHashMap<>();
 
     public RoomSnapshot createRoom(String roomId, Long hostUserId, int aiCount, String boardType) {
         String resolvedBoard = BoardTypes.resolveOrDefault(boardType);
@@ -47,10 +53,19 @@ public class RoomService {
         GameRoomState room = gameEngine.createRoom(roomId);
         RoomLobby lobby = new RoomLobby(hostUserId, aiCount, resolvedBoard);
         lobbies.put(room.getRoomId(), lobby);
-        if (hostUserId != null) {
-            joinRoom(room.getRoomId(), 1, hostUserId);
+        try {
+            lobbyPersistence.onRoomCreated(room.getRoomId(), hostUserId, aiCount, resolvedBoard);
+            if (hostUserId != null) {
+                joinRoom(room.getRoomId(), 1, hostUserId);
+            }
+            return snapshot(room.getRoomId());
+        } catch (RuntimeException e) {
+            rollbackCreatedRoom(room.getRoomId());
+            if (e instanceof RoomPersistenceException) {
+                throw e;
+            }
+            throw new RoomPersistenceException("Failed to persist room: " + room.getRoomId(), e);
         }
-        return snapshot(room.getRoomId());
     }
 
     public RoomSnapshot createRoom(String roomId, Long hostUserId, int aiCount) {
@@ -77,6 +92,7 @@ public class RoomService {
                 throw new IllegalStateException("Seat already occupied: " + resolvedSeat);
             }
             seat.setHumanUserId(userId);
+            lobbyPersistence.onPlayerJoined(roomId, resolvedSeat, userId);
             return new SeatSnapshot(roomId, resolvedSeat, userId, seat.isReady(), room.getPhase());
         });
     }
@@ -92,6 +108,7 @@ public class RoomService {
                 throw new IllegalStateException("AI-reserved seat cannot be readied by human: " + seatId);
             }
             seat.setReady(ready);
+            lobbyPersistence.onPlayerReady(roomId, seatId, ready);
             return new SeatSnapshot(roomId, seatId, seat.getHumanUserId(), seat.isReady(), room.getPhase());
         });
     }
@@ -111,6 +128,7 @@ public class RoomService {
             seat.setReady(false);
             connectionManager.findBySeat(roomId, seatId)
                     .ifPresent(rec -> connectionManager.remove(rec.session().getId()));
+            lobbyPersistence.onPlayerLeft(roomId, seatId);
             return new SeatSnapshot(roomId, seatId, null, false, room.getPhase());
         });
     }
@@ -126,6 +144,7 @@ public class RoomService {
             }
             phaseTickScheduler.stop(roomId);
             connectionManager.removeRoom(roomId);
+            lobbyPersistence.onRoomDissolved(roomId);
             gameEngine.removeRoom(roomId);
             lobbies.remove(roomId);
             return null;
@@ -145,6 +164,7 @@ public class RoomService {
             return gameEngine.startGame(roomId);
         });
         if (result.success()) {
+            lobbyPersistence.onGameStarted(roomId, gameEngine.getRoomState(roomId));
             wsPushService.pushPhaseSyncToConnected(roomId);
             wsPushService.flushOutbound(roomId);
             phaseTickScheduler.start(roomId);
@@ -192,6 +212,24 @@ public class RoomService {
                 humanCount,
                 seats
         );
+    }
+
+    public void evictAfterGameOver(String roomId) {
+        phaseTickScheduler.stop(roomId);
+        connectionManager.removeRoom(roomId);
+        lobbies.remove(roomId);
+    }
+
+    private void rollbackCreatedRoom(String roomId) {
+        try {
+            lobbyPersistence.onRoomDissolved(roomId);
+        } catch (RuntimeException ignored) {
+            // best-effort cleanup
+        }
+        phaseTickScheduler.stop(roomId);
+        connectionManager.removeRoom(roomId);
+        gameEngine.removeRoom(roomId);
+        lobbies.remove(roomId);
     }
 
     RoomLobby lobby(String roomId) {

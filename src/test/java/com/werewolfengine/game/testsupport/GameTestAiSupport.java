@@ -9,6 +9,7 @@ import com.werewolfengine.ai.memory.MemoryPromptFormatter;
 import com.werewolfengine.ai.prompt.AiPromptBuilder;
 import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.observability.ActionLogService;
+import com.werewolfengine.game.observability.GameActionRecorder;
 import com.werewolfengine.game.orchestration.AiTurnCoordinator;
 import com.werewolfengine.game.orchestration.GamePhaseScheduler;
 import com.werewolfengine.game.orchestration.MockGameRunner;
@@ -36,18 +37,22 @@ public final class GameTestAiSupport {
         PhaseCountdown.setEnabled(false);
         AIService ai = disabledAiService();
         TurnActorResolver resolver = new TurnActorResolver();
-        AiTurnCoordinator coordinator = new AiTurnCoordinator(stateMachine, resolver, ai, actionLog);
+        GameActionRecorder recorder = new GameActionRecorder(stateMachine, actionLog);
+        AiTurnCoordinator coordinator = new AiTurnCoordinator(stateMachine, resolver, ai, recorder);
         PhaseTimeoutHandler timeoutHandler = new PhaseTimeoutHandler(
                 stateMachine,
                 resolver,
                 ai,
-                actionLog
+                new MockAIPlayer(),
+                actionLog,
+                recorder
         );
         GamePhaseScheduler scheduler = new GamePhaseScheduler(
                 stateMachine,
                 coordinator,
                 timeoutHandler,
-                actionLog
+                recorder,
+                roomId -> {}
         );
         MockGameRunner runner = new MockGameRunner(stateMachine, scheduler);
         return new Harness(ai, coordinator, runner, scheduler);

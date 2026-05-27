@@ -9,6 +9,7 @@ import com.werewolfengine.gateway.ConnectionManager;
 import com.werewolfengine.gateway.RoomExecutionGuard;
 import com.werewolfengine.gateway.RoomPhaseTickScheduler;
 import com.werewolfengine.gateway.WsPushService;
+import com.werewolfengine.room.persistence.RoomLobbyPersistence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,20 +37,24 @@ class RoomServiceTest {
 
     @BeforeEach
     void setUp() {
+        ActionLogService actionLog = new ActionLogService();
+        GameStateMachine stateMachine = new GameStateMachine(actionLog);
         gameEngine = new GameEngineService(
-                new GameStateMachine(new ActionLogService()),
+                stateMachine,
                 null,
                 null,
-                new ActionLogService(),
+                actionLog,
                 null,
-                new ChatMessageService()
+                new ChatMessageService(),
+                new com.werewolfengine.game.observability.GameActionRecorder(stateMachine, actionLog)
         );
         roomService = new RoomService(
                 gameEngine,
                 new RoomExecutionGuard(),
                 wsPushService,
                 phaseTickScheduler,
-                connectionManager
+                connectionManager,
+                RoomLobbyPersistence.NO_OP
         );
     }
 

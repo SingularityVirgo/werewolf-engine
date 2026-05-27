@@ -42,7 +42,7 @@
 | WS CONNECTED / JOIN / PHASE_SYNC / ACTION_ACK | `websocket-client` |
 | 参考脚本 | 验收时使用的 HTTP+WS 流程，可固化为 `scripts/ws-smoke.py` |
 
-**通过标准**：见 [gateway-room-ws-checklist §5](../gateway-room-ws-checklist.md)。
+**通过标准**：见 [gateway-room-ws §4](../checklists/gateway-room-ws.md)。
 
 ### 2.3 Internal 路径 E2E（已可用）
 

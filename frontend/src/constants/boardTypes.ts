@@ -11,7 +11,7 @@ export interface BoardPreset {
 export const BOARD_PRESETS: BoardPreset[] = [
   {
     id: BOARD_TYPE_STANDARD,
-    name: '预女猎白 · 12 人标准场',
+    name: '预女猎愚 · 12 人标准场',
     description: '4 狼 · 4 民 · 预言家 · 女巫 · 猎人 · 愚者',
     enabled: true,
   },

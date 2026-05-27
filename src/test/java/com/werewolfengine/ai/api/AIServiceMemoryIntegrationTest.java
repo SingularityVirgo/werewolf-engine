@@ -73,12 +73,16 @@ class AIServiceMemoryIntegrationTest {
                 actionLog
         );
         TurnActorResolver resolver = new TurnActorResolver();
-        coordinator = new AiTurnCoordinator(stateMachine, resolver, aiService, actionLog);
+        com.werewolfengine.game.observability.GameActionRecorder recorder =
+                new com.werewolfengine.game.observability.GameActionRecorder(stateMachine, actionLog);
+        coordinator = new AiTurnCoordinator(stateMachine, resolver, aiService, recorder);
         phaseScheduler = new GamePhaseScheduler(
                 stateMachine,
                 coordinator,
-                new PhaseTimeoutHandler(stateMachine, resolver, aiService, actionLog),
-                actionLog
+                new PhaseTimeoutHandler(stateMachine, resolver, aiService, new MockAIPlayer(), actionLog,
+                        new com.werewolfengine.game.observability.GameActionRecorder(stateMachine, actionLog)),
+                new com.werewolfengine.game.observability.GameActionRecorder(stateMachine, actionLog),
+                roomId -> {}
         );
     }
 

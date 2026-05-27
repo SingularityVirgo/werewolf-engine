@@ -78,6 +78,7 @@
 | [adr/001-night-skill-pipeline.md](../adr/001-night-skill-pipeline.md) · [adr/002-death-bus-and-hunter-flow.md](../adr/002-death-bus-and-hunter-flow.md) | 夜内管道、死亡总线、猎人 |
 | [gateway-integration.md](../reference/gateway-integration.md) | Gateway / Bot 联调 |
 | [adr/005-gateway-formal-path.md](../adr/005-gateway-formal-path.md) | Gateway 决策与实现（Formal 路径） |
+| [adr/007-persistence-redis-mysql.md](../adr/007-persistence-redis-mysql.md) | MySQL / Redis 持久化、断线重连（§4.7 实现决策） |
 | [progress/status.md](status.md) | **实现进度**（与 PRD 对照，非冻结） |
 | [adr/README.md](../adr/README.md) | ADR 索引与阅读顺序 |
 | [reference/code-modules.md](../reference/code-modules.md) | 包结构速查 |
@@ -1179,7 +1180,7 @@ ws://{host}:{port}/ws/game?token={token}
 
 **建房 `boardType`（接口预留）：**
 
-- `POST /api/room` 可选 body 字段 `boardType`，枚举 MVP 仅 `STANDARD_12_PRYH_IDIOT`（预女猎白 · 12 人）
+- `POST /api/room` 可选 body 字段 `boardType`，枚举 MVP 仅 `STANDARD_12_PRYH_IDIOT`（预女猎愚 · 12 人）
 - 响应回显 `boardType`；**规则引擎仍固定单板**，未知值 HTTP 400
 - 默认 `aiCount: 11`（1 真人 + 11 AI）
 
@@ -1399,23 +1400,30 @@ com.werewolfengine
 | GamePhase 枚举 | A 牵头，全员 |
 | AI JSON Schema | A 牵头，全员 |
 
-### 8.5 实现对照（非冻结，2026-05-25）
+### 8.5 实现对照（非冻结，2026-05-27 MVP 签字）
 
-> 本节描述**当前代码与验收现状**，供联调与评审；**不修改** §0.3 已冻结的协议字段。细节与待办以 [status.md](status.md) 为准；Gateway 设计见 [ADR-005](../adr/005-gateway-formal-path.md)。
+> 本节描述**当前代码与验收现状**，供联调与评审；**不修改** §0.3 已冻结的协议字段。  
+> **MVP 签字页**：[mvp-signoff-2026-05-27.md](mvp-signoff-2026-05-27.md) · 待办细节：[status.md](status.md)
 
 | PRD 条目 | 实现状态 | 说明 |
 |----------|----------|------|
-| §8.2 Day4 五项 | **已通过**（2026-05-25） | `scripts/formal/run_day4_formal.py` 10/10 |
-| §7.3 B：WS + 建房 + `PHASE_SYNC` | **P0 完成** | 定向推送；MVP 向已连接座广播裁剪 sync |
-| Formal Mock/AI 整局 | **是** | `POST /api/room/.../phase-tick` + `GamePhaseScheduler` |
-| `PHASE_SYNC.countdown` | **已实现**（2026-05-25） | ADR-005 P-05；联调见 [gateway-integration §6](../reference/gateway-integration.md) |
-| `GAME_EVENT` WS | 未实现 | ADR-005 P-06；愚者/死亡暂靠 `PHASE_SYNC` |
-| Redis 会话 / token | 未实现 | [auth-session](../reference/auth-session.md) |
-| `aiCount` 建房、自动分座 | **已实现**（2026-05-25） | 见 [gateway-room-modules §4](../reference/gateway-room-modules.md) |
-| Internal 路径 A | **是** | `/internal/game`，压测与 A 单测 |
-| 全角色 LLM 95% 解析率 | 待做 | §8.3 Week2；见 status A-02 |
+| §8.2 Day4 五项 | **已通过** | `run_day4_formal.py` 10/10 |
+| §7.3 B：WS + 建房 + `PHASE_SYNC` | **P0 完成** | Formal 路径 B；MVP 向已连接座推送 sync |
+| Formal Mock/AI 整局 | **是** | `phase-tick` + `GamePhaseScheduler`；`formal_path_smoke` 8/8 |
+| `PHASE_SYNC.countdown` | **是** | ADR-005 P-05；`countdown_observe.py` |
+| `GAME_EVENT` / `CHAT_BROADCAST` WS | **是** | ADR-005 P-06；`frontend_ws_smoke` 8/8 |
+| Redis 会话 / token / 30s 重连 | **是** | ADR-007 阶段 3；`reconnect_grace_smoke` / `reconnect_hosting_smoke` |
+| MySQL room / `game_record` 归档 | **是** | ADR-007 阶段 1～2；Flyway V1/V2；G-08 去重 |
+| `aiCount` 建房、自动分座 | **是** | `hostUserId` + 11 AI Formal 脚本标准模式 |
+| Internal 路径 A | **是** | `/internal/game`；单测 + Mock 整局 |
+| 全角色 LLM 95% 解析率 | **是**（A-02） | 内存整局 + `A02FullGameLlmAcceptanceTest`；单局 `formal_llm_smoke` |
+| 100 局压测无异常 | **是**（Mock） | `load_test_formal.py` 100/100 → `target/reports/load-test-100games.json` |
+| 非法操作不污染状态 | **是** | 单测 + `illegal_action_smoke.py` |
+| Web UI 三屏 + WS 展示 | **是** | F-01～F-05、F-13；`frontend_ws_smoke.py` |
 
-**双路径验收**：路径 A 可证明引擎跑局；路径 B 可证明 Formal 协议闭环（见 [gateway-integration](../reference/gateway-integration.md) §0）。
+**双路径验收**：路径 A 证明引擎；路径 B 证明 Formal 协议（见 [gateway-integration](../reference/gateway-integration.md) §0）。
+
+**MVP 签字**：2026-05-27，详见 [mvp-signoff-2026-05-27.md](mvp-signoff-2026-05-27.md)。
 
 ---
 
@@ -1542,6 +1550,7 @@ com.werewolfengine
 | v1.0.15 | 2026-05-25 | **§8.5 实现对照**；链 [status](status.md)、[ADR-005](../adr/005-gateway-formal-path.md)、[adr/README](../adr/README.md)。**不改变** 规则/协议冻结 |
 | v1.0.16 | 2026-05-26 | **§4.8 S-UI-04**、§2.2、`ACTION_ACK` Web UI 义务：狼夜 `KILL` 成功/失败反馈与 `WAITING_WOLF_CONSENSUS` 展示；**不改变** v1.0.0 协议/规则冻结 |
 | v1.0.17 | 2026-05-26 | **§4.5.4**：LLM 单次调用超时 **3s→6s**；JSON 解析失败**重试 0→最多 2 次**；明确**不做 LLM 预取**（前序发言须先入 `action_log`） |
+| v1.0.18 | 2026-05-27 | **§8.5 MVP 签字**：实现对照更新；[mvp-signoff-2026-05-27.md](mvp-signoff-2026-05-27.md)。**不改变** v1.0.0 规则/协议冻结 |
 
 ---
 

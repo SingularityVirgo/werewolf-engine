@@ -5,10 +5,14 @@ import com.werewolfengine.ai.api.PlayerIntent;
 import com.werewolfengine.game.chat.ChatMessageService;
 import com.werewolfengine.game.model.GameActionCommand;
 import com.werewolfengine.game.model.GameActionType;
+import com.werewolfengine.game.model.ConnectionState;
 import com.werewolfengine.game.model.GamePhase;
 import com.werewolfengine.game.model.GameRoomState;
+import com.werewolfengine.game.model.PlayerState;
+import com.werewolfengine.game.model.RoomStatus;
 import com.werewolfengine.game.observability.ActionLogEntry;
 import com.werewolfengine.game.observability.ActionLogService;
+import com.werewolfengine.game.observability.GameActionRecorder;
 import com.werewolfengine.game.orchestration.GamePhaseScheduler;
 import com.werewolfengine.game.orchestration.MockGameRunner;
 import com.werewolfengine.message.payload.ActionAckPayload;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -32,6 +37,7 @@ public class GameEngineService {
     private final ActionLogService actionLog;
     private final GamePhaseScheduler phaseScheduler;
     private final ChatMessageService chatMessageService;
+    private final GameActionRecorder actionRecorder;
 
     public GameEngineService(
             GameStateMachine stateMachine,
@@ -39,7 +45,8 @@ public class GameEngineService {
             MockGameRunner mockGameRunner,
             ActionLogService actionLog,
             GamePhaseScheduler phaseScheduler,
-            ChatMessageService chatMessageService
+            ChatMessageService chatMessageService,
+            GameActionRecorder actionRecorder
     ) {
         this.stateMachine = stateMachine;
         this.aiService = aiService;
@@ -47,6 +54,7 @@ public class GameEngineService {
         this.actionLog = actionLog;
         this.phaseScheduler = phaseScheduler;
         this.chatMessageService = chatMessageService;
+        this.actionRecorder = actionRecorder;
     }
 
     public GameRoomState createDevRoom(String roomId) {
@@ -94,16 +102,11 @@ public class GameEngineService {
 
     public ActionResult submitAction(String roomId, GameActionCommand command) {
         GameRoomState before = stateMachine.getRoom(roomId).orElseThrow();
-        int round = before.getRound();
-        GamePhase phase = command.clientPhase() != null ? command.clientPhase() : before.getPhase();
-        Integer effectiveTarget = command.action() == GameActionType.SAVE
-                ? before.getPendingWolfKillTarget()
-                : command.target();
-        GameStateMachine.HandleActionResult result = stateMachine.handleAction(roomId, command);
-        GameRoomState after = stateMachine.getRoom(roomId).orElse(before);
-        actionLog.recordPlayerAction(roomId, round, phase, after, command, result.ack(), effectiveTarget);
-        ActionAckPayload ack = stateMachine.toPayload(result.ack());
-        return new ActionResult(ack, result.phaseSyncs());
+        GameStateMachine.HandleActionResult result = actionRecorder.recordAndHandle(
+                roomId, before, command, null);
+        return new ActionResult(
+                stateMachine.toPayload(result.ack()),
+                result.phaseSyncs());
     }
 
     /**
@@ -111,18 +114,46 @@ public class GameEngineService {
      * (timer / gateway); not a player GAME_ACTION.
      */
     public ActionResult advanceDayAnnounce(String roomId) {
-        GameRoomState beforeRoom = stateMachine.getRoom(roomId).orElse(null);
-        GamePhase before = beforeRoom != null ? beforeRoom.getPhase() : null;
-        int round = beforeRoom != null ? beforeRoom.getRound() : 0;
-        GameStateMachine.HandleActionResult result = stateMachine.advanceDayAnnounce(roomId);
-        if (before != null && beforeRoom != null) {
-            actionLog.recordSystemEvent(beforeRoom.getRoomId(), round, before, "advanceDayAnnounce", null);
-        }
+        GameStateMachine.HandleActionResult result = actionRecorder.recordAdvanceDayAnnounce(roomId);
         return new ActionResult(stateMachine.toPayload(result.ack()), result.phaseSyncs());
     }
 
     public GamePhaseScheduler.TickResult tickPhase(String roomId) {
         return phaseScheduler.tick(roomId);
+    }
+
+    public Optional<UserSeatBinding> findPlayingSeatForUser(long userId) {
+        return stateMachine.findPlayingSeatForUser(userId);
+    }
+
+    public void markSeatGrace(String roomId, int playerId, long graceDeadlineMs) {
+        PlayerState seat = requireHumanSeat(roomId, playerId);
+        seat.setConnectionState(ConnectionState.GRACE);
+        seat.setGraceDeadlineMs(graceDeadlineMs);
+    }
+
+    public void markSeatOnline(String roomId, int playerId) {
+        PlayerState seat = requireHumanSeat(roomId, playerId);
+        seat.setConnectionState(ConnectionState.ONLINE);
+        seat.setGraceDeadlineMs(null);
+    }
+
+    public void markSeatAiHosted(String roomId, int playerId) {
+        PlayerState seat = requireHumanSeat(roomId, playerId);
+        seat.setConnectionState(ConnectionState.AI_HOSTED);
+        seat.setGraceDeadlineMs(null);
+    }
+
+    private PlayerState requireHumanSeat(String roomId, int playerId) {
+        GameRoomState room = getRoomState(roomId);
+        PlayerState seat = room.getPlayer(playerId);
+        if (seat == null) {
+            throw new IllegalArgumentException("Seat not found: " + playerId);
+        }
+        if (seat.getHumanUserId() == null) {
+            throw new IllegalStateException("Not a human seat: " + playerId);
+        }
+        return seat;
     }
 
     public List<ActionLogEntry> getActionLog(String roomId) {
@@ -188,5 +219,8 @@ public class GameEngineService {
             Map<Integer, Integer> wolfKillVotes,
             List<PhaseSyncPayload> wolfPhaseSyncs
     ) {
+    }
+
+    public record UserSeatBinding(String roomId, int playerId, ConnectionState connectionState) {
     }
 }

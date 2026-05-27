@@ -28,7 +28,7 @@ except ImportError:
 
 BASE = os.environ.get("WERWOLF_BASE_URL", "http://localhost:8080").rstrip("/")
 WS_URL = os.environ.get("WERWOLF_WS_URL", "ws://localhost:8080/ws/game")
-LISTEN_SEC = float(os.environ.get("WERWOLF_UI_SMOKE_SEC", "45"))
+LISTEN_SEC = float(os.environ.get("WERWOLF_UI_SMOKE_SEC", "180"))
 
 
 def post(path: str, body: dict | None = None, headers: dict | None = None) -> dict[str, Any]:
@@ -89,7 +89,14 @@ def main() -> int:
 
         deadline = time.time() + LISTEN_SEC
         ws.settimeout(1.0)
+        tick_at = time.time()
         while time.time() < deadline:
+            if time.time() >= tick_at:
+                try:
+                    post(f"/api/room/{room_id}/phase-tick", {})
+                except Exception:
+                    pass
+                tick_at = time.time() + 0.25
             try:
                 raw = ws.recv()
             except Exception:
@@ -99,8 +106,20 @@ def main() -> int:
             msg = json.loads(raw)
             t = str(msg.get("type"))
             types_seen.add(t)
+            if t == "PHASE_SYNC":
+                sync = msg.get("payload", {}).get("phaseSync") or msg.get("payload", {})
+                if sync.get("currentPhase") == "GAME_OVER":
+                    types_seen.add("GAME_OVER")
             if t == "GAME_OVER":
                 break
+
+        if "GAME_OVER" not in types_seen:
+            for _ in range(200):
+                tick = post(f"/api/room/{room_id}/phase-tick", {})
+                if tick.get("status") == "GAME_OVER" or tick.get("phase") == "GAME_OVER":
+                    types_seen.add("GAME_OVER")
+                    break
+                time.sleep(0.05)
 
         ws.close()
     except Exception as e:

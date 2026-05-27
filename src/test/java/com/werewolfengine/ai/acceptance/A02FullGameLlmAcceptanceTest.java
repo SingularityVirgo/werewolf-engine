@@ -1,6 +1,7 @@
 package com.werewolfengine.ai.acceptance;
 
 import com.werewolfengine.ai.parse.AiIntentParser;
+import com.werewolfengine.ai.policy.MockAIPlayer;
 import com.werewolfengine.game.engine.GameStateMachine;
 import com.werewolfengine.game.model.GamePhase;
 import com.werewolfengine.game.model.GameRoomState;
@@ -139,7 +140,9 @@ class A02FullGameLlmAcceptanceTest {
               sm,
               new TurnActorResolver(),
               GameTestAiSupport.disabledAiService(),
-              null
+              new MockAIPlayer(),
+              null,
+              new com.werewolfengine.game.observability.GameActionRecorder(sm, null)
       );
       String roomId = "g06_accept";
       sm.createRoom(roomId);

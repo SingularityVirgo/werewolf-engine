@@ -174,7 +174,12 @@ function AnnouncerFeed({
 
   const announceEntries = gameLog.filter(
 
-    (e) => e.type === 'event' || e.type === 'death' || e.type === 'system' || e.type === 'vote'
+    (e) =>
+      e.type === 'event' ||
+      e.type === 'death' ||
+      e.type === 'system' ||
+      e.type === 'vote' ||
+      e.type === 'action'
 
   );
 
@@ -200,7 +205,15 @@ function AnnouncerFeed({
 
           )}
 
-          <span className={entry.type === 'death' ? 'text-blood' : 'text-text-secondary'}>
+          <span
+            className={
+              entry.type === 'death'
+                ? 'text-blood'
+                : entry.type === 'action'
+                  ? 'text-gold'
+                  : 'text-text-secondary'
+            }
+          >
 
             {entry.message}
 

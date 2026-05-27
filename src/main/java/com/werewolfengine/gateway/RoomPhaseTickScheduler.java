@@ -2,6 +2,7 @@ package com.werewolfengine.gateway;
 
 import com.werewolfengine.game.engine.GameEngineService;
 import com.werewolfengine.game.orchestration.GamePhaseScheduler;
+import com.werewolfengine.game.persistence.GameOverLifecycleService;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ public class RoomPhaseTickScheduler {
     private final GameEngineService gameEngine;
     private final RoomExecutionGuard roomGuard;
     private final WsPushService wsPushService;
+    private final GameOverLifecycleService gameOverLifecycle;
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(
             2,
             r -> {
@@ -46,11 +48,13 @@ public class RoomPhaseTickScheduler {
     public RoomPhaseTickScheduler(
             GameEngineService gameEngine,
             RoomExecutionGuard roomGuard,
-            WsPushService wsPushService
+            WsPushService wsPushService,
+            GameOverLifecycleService gameOverLifecycle
     ) {
         this.gameEngine = gameEngine;
         this.roomGuard = roomGuard;
         this.wsPushService = wsPushService;
+        this.gameOverLifecycle = gameOverLifecycle;
     }
 
     public void start(String roomId) {
@@ -87,6 +91,7 @@ public class RoomPhaseTickScheduler {
             wsPushService.flushOutbound(roomId);
             if ("GAME_OVER".equals(result.status())) {
                 stop(roomId);
+                gameOverLifecycle.finalizeIfGameOver(roomId);
             }
             return result;
         });

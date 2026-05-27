@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { PlayerSubState, PlayerSubStateValue } from '../../types/game';
 
 interface NightWolfActionProps {
   selectedTarget: number | null;
   wolfChatInPhase: boolean;
+  playerSubState: PlayerSubStateValue;
   onKill: () => void;
   onWolfChat: (content: string) => void;
   onSkip: () => void;
@@ -11,10 +13,12 @@ interface NightWolfActionProps {
 export const NightWolfAction: React.FC<NightWolfActionProps> = ({
   selectedTarget,
   wolfChatInPhase,
+  playerSubState,
   onKill,
   onWolfChat,
   onSkip,
 }) => {
+  const waitingConsensus = playerSubState === PlayerSubState.WAITING_WOLF_CONSENSUS;
   const [wolfInput, setWolfInput] = useState('');
 
   const handleWolfSend = () => {
@@ -27,9 +31,14 @@ export const NightWolfAction: React.FC<NightWolfActionProps> = ({
   return (
     <div className="panel space-y-4">
       <h3 className="text-title font-semibold text-text-primary">狼人行动</h3>
+      {waitingConsensus && (
+        <p className="text-body text-gold bg-gold/10 border border-gold/30 rounded px-3 py-2">
+          已提交刀口，等待狼队达成一致（30s 内齐票或超时按规则结算）
+        </p>
+      )}
       <p className="text-body text-text-secondary">
         {selectedTarget
-          ? <>目标 <span className="font-mono text-gold">#{selectedTarget}</span></>
+          ? <>刀口 <span className="font-mono text-gold">#{selectedTarget}</span></>
           : '在座位表中选择目标'}
       </p>
       <div className="flex gap-2">

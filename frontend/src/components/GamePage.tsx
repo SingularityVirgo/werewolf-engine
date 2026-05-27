@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 
 import { useGameState } from '../hooks/useGameState';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -11,7 +11,14 @@ import { GameOverScreen } from './GameOver/GameOverScreen';
 import { Loading } from './common/Loading';
 import { BrandBackdrop } from './brand/BrandBackdrop';
 import { Toast } from './common/Toast';
-import { GamePhase, PhaseSyncPayload, GameOverPayload, ChatMessagePayload, GameEventPayload } from '../types/game';
+import {
+  GamePhase,
+  PhaseSyncPayload,
+  GameOverPayload,
+  ChatMessagePayload,
+  GameEventPayload,
+  ActionAckPayload,
+} from '../types/game';
 
 interface GamePageProps {
   roomId: string;
@@ -55,6 +62,7 @@ export const GamePage: React.FC<GamePageProps> = ({
   const [selectedTarget, setSelectedTarget] = useState<number | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null);
   const [loading, setLoading] = useState(true);
+  const pendingActionRef = useRef<{ action: string; target?: number } | null>(null);
 
   useEffect(() => {
     setRoom(roomId, isOwner);
@@ -67,17 +75,45 @@ export const GamePage: React.FC<GamePageProps> = ({
     setToast({ message: '已连接', type: 'success' });
   }, [setConnected]);
 
-  const onPhaseSync = useCallback((payload: PhaseSyncPayload) => {
-    handlePhaseSync(payload);
-    setSelectedTarget(null);
-  }, [handlePhaseSync]);
+  const onPhaseSync = useCallback(
+    (payload: PhaseSyncPayload) => {
+      const phaseChanged = state.phase !== payload.currentPhase;
+      handlePhaseSync(payload);
+      if (phaseChanged) {
+        setSelectedTarget(null);
+      }
+    },
+    [handlePhaseSync, state.phase]
+  );
 
-  const onActionAck = useCallback((payload: any) => {
-    handleActionAck(payload);
-    if (!payload.success) {
-      setToast({ message: payload.message || '操作失败', type: 'error' });
-    }
-  }, [handleActionAck]);
+  const onActionAck = useCallback(
+    (payload: ActionAckPayload) => {
+      handleActionAck(payload);
+      const pending = pendingActionRef.current;
+      pendingActionRef.current = null;
+
+      if (payload.success) {
+        const isWolfKillAck =
+          pending?.action === 'KILL' && payload.serverPhase === GamePhase.NIGHT_WOLF;
+        if (isWolfKillAck) {
+          setToast({
+            message: `已记录刀口 #${pending?.target ?? '?'}，等待狼队一致`,
+            type: 'success',
+          });
+        } else {
+          setToast({ message: payload.message || '操作成功', type: 'success' });
+          setSelectedTarget(null);
+        }
+      } else {
+        const message =
+          payload.code === 'WOLF_CHAT_REQUIRED'
+            ? payload.message || '须先进行狼队频道商议'
+            : payload.message || payload.code || '操作失败';
+        setToast({ message, type: 'error' });
+      }
+    },
+    [handleActionAck]
+  );
 
   const onGameOver = useCallback((payload: GameOverPayload) => {
     handleGameOver(payload);
@@ -136,8 +172,8 @@ export const GamePage: React.FC<GamePageProps> = ({
 
   const handleAction = useCallback(
     (action: string, target?: number, content?: string) => {
+      pendingActionRef.current = { action, target };
       ws.sendGameAction(roomId, seatId, action, state.phase, target, content);
-      setSelectedTarget(null);
     },
     [ws, roomId, seatId, state.phase]
   );
@@ -229,6 +265,7 @@ export const GamePage: React.FC<GamePageProps> = ({
           myRole={state.phaseSync?.yourRole || null}
           phaseSync={state.phaseSync}
           selectedTarget={selectedTarget}
+          playerSubState={state.playerSubState}
           onAction={handleAction}
         />
         </div>

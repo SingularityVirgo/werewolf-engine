@@ -5,7 +5,7 @@
 | 版本 | v0.1 |
 | 日期 | 2026-05-18 |
 | 需求真源 | [PRD §4.2.4](../progress/requirements-mvp-v0.1.md) |
-| 实现状态 | **未实现**（token 未解析）；本文为目标态 + MVP 过渡 |
+| 实现状态 | **部分实现**（WS token + 30s grace + 托管）；详见 **[ADR-007](../adr/007-persistence-redis-mysql.md)** |
 
 ---
 
@@ -63,14 +63,14 @@ sequenceDiagram
 | 环境 | Token → userId |
 |------|----------------|
 | MVP 单实例 | 内存 `ConcurrentHashMap` 或 dev「token=字符串 userId」 |
-| 目标 | Redis：`werewolf:auth:token:{opaque}` → `userId` |
+| 目标 | Redis：`werewolf:auth:token:{opaque}` → `userId`（[ADR-007 §4.2](../adr/007-persistence-redis-mysql.md#42-key-全表prd-§472--鉴权扩展)） |
 
 ---
 
 ## 4. 断线重连（PRD 已冻结）
 
 - 窗口：**30s**。
-- 键：`werewolf:ws:conn:{roomId}:{playerId}` → `sessionId`（见 [persistence-rollout](persistence-rollout.md)）。
+- 键：`werewolf:ws:conn:{roomId}:{playerId}` → `sessionId`（见 [ADR-007 §4](../adr/007-persistence-redis-mysql.md#4-redis-设计)）。
 - 重连：同 token 恢复绑定；超时后座位标记掉线，由 `GamePhaseScheduler` / 默认操作处理。
 
 ---
@@ -79,10 +79,10 @@ sequenceDiagram
 
 | 项 | 状态 |
 |----|------|
-| WS query `token` | 未读取 |
+| WS query `token` | ✅ Handshake 解析；dev 可用 numeric userId |
 | HTTP `Authorization` | 未校验 |
-| `CONNECTED.userId` | 未返回（仅 `sessionId`） |
-| 重连 | 未实现 |
+| `CONNECTED.userId` | ✅ 与 token 一致 |
+| 重连 | ✅ 30s grace + `PHASE_SYNC` 恢复 |
 
 联调过渡期：HTTP join 显式传 `userId`；WS `JOIN_ROOM` 用 `seatId` 绑定（见 [gateway-room-modules](gateway-room-modules.md) §2.2）。
 
@@ -92,4 +92,4 @@ sequenceDiagram
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
-| v0.1 | 2026-05-18 | 初稿 |
+| v0.2 | 2026-05-27 | 链 ADR-007 为决策真源 |

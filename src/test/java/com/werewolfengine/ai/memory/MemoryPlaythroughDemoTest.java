@@ -61,11 +61,13 @@ class MemoryPlaythroughDemoTest {
         stateMachine.markAllReady(roomId);
         assertThat(stateMachine.startGame(roomId).success()).isTrue();
 
+        com.werewolfengine.game.observability.GameActionRecorder recorder =
+                new com.werewolfengine.game.observability.GameActionRecorder(stateMachine, actionLog);
         AiTurnCoordinator coordinator = new AiTurnCoordinator(
                 stateMachine,
                 new TurnActorResolver(),
                 aiService,
-                actionLog
+                recorder
         );
         GamePhaseScheduler phaseScheduler = new GamePhaseScheduler(
                 stateMachine,
@@ -74,8 +76,11 @@ class MemoryPlaythroughDemoTest {
                         stateMachine,
                         new TurnActorResolver(),
                         aiService,
-                        actionLog),
-                actionLog
+                        new MockAIPlayer(),
+                        actionLog,
+                        new com.werewolfengine.game.observability.GameActionRecorder(stateMachine, actionLog)),
+                new com.werewolfengine.game.observability.GameActionRecorder(stateMachine, actionLog),
+                ignored -> {}
         );
         MockGameRunner runner = new MockGameRunner(stateMachine, phaseScheduler);
 

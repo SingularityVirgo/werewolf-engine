@@ -21,7 +21,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onStart }) => {
             狼人杀
           </h1>
           <p className="mt-4 text-body text-mist max-w-sm leading-relaxed">
-            十二人围坐，预女猎白标准局。石室已备好座位，只等法官落槌。
+            十二人围坐，预女猎愚标准局。石室已备好座位，只等法官落槌。
           </p>
 
           <p className="mt-10 text-label text-text-muted uppercase tracking-widest hidden lg:block">

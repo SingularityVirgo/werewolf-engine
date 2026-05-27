@@ -93,12 +93,22 @@ export interface PhaseSyncPayload {
   seerCheckTarget: number | null;
 }
 
+/** Server-side per-player UI hints (e.g. wolf consensus wait). Does not change serverPhase. */
+export const PlayerSubState = {
+  WAITING_WOLF_CONSENSUS: 'WAITING_WOLF_CONSENSUS',
+} as const;
+
+export type PlayerSubStateValue =
+  | (typeof PlayerSubState)[keyof typeof PlayerSubState]
+  | string
+  | null;
+
 export interface ActionAckPayload {
   success: boolean;
   message: string;
   code: string | null;
   serverPhase: GamePhase;
-  playerSubState: string | null;
+  playerSubState: PlayerSubStateValue;
 }
 
 export interface GameEventPayload {
@@ -152,6 +162,8 @@ export interface GameState {
   isRoomOwner: boolean;
   winner: GameWinner | null;
   finalRoles: Record<number, Role> | null;
+  /** From latest ACTION_ACK; cleared when phase advances. */
+  playerSubState: PlayerSubStateValue;
 }
 
 export interface GameLogEntry {

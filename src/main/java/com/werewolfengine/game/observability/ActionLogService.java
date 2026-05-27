@@ -149,6 +149,28 @@ public class ActionLogService {
         return list == null ? List.of() : List.copyOf(list);
     }
 
+    /** G-08: dedupe player lines before MySQL archive (round+phase+playerId+action+target+success). */
+    public List<ActionLogEntry> exportForArchive(String roomId) {
+        return dedupeForArchive(getLog(roomId));
+    }
+
+    public static List<ActionLogEntry> dedupeForArchive(List<ActionLogEntry> entries) {
+        List<ActionLogEntry> out = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        for (ActionLogEntry entry : entries) {
+            if (entry.action() == null) {
+                out.add(entry);
+                continue;
+            }
+            String key = entry.round() + "|" + entry.phase() + "|" + entry.playerId()
+                    + "|" + entry.action() + "|" + entry.target() + "|" + entry.success();
+            if (seen.add(key)) {
+                out.add(entry);
+            }
+        }
+        return out;
+    }
+
     public void clear(String roomId) {
         logs.remove(roomId);
     }

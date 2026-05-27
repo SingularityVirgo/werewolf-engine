@@ -10,14 +10,17 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final GameWebSocketHandler handler;
+    private final WebSocketAuthHandshakeInterceptor authInterceptor;
 
-    public WebSocketConfig(GameWebSocketHandler handler) {
+    public WebSocketConfig(GameWebSocketHandler handler, WebSocketAuthHandshakeInterceptor authInterceptor) {
         this.handler = handler;
+        this.authInterceptor = authInterceptor;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(handler, "/ws/game")
+                .addInterceptors(authInterceptor)
                 .setAllowedOrigins("*");
     }
 }

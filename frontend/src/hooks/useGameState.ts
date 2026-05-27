@@ -33,6 +33,7 @@ const initialState: GameState = {
   isRoomOwner: false,
   winner: null,
   finalRoles: null,
+  playerSubState: null,
 };
 
 function createEmptyPlayers(): PlayerInfo[] {
@@ -122,6 +123,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           players,
           winner,
           finalRoles,
+          playerSubState: null,
           gameLog: hasGameOverLog
             ? state.gameLog
             : [
@@ -139,6 +141,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         };
       }
 
+      const phaseChanged = state.phase !== sync.currentPhase;
       const newState: GameState = {
         ...state,
         phase: sync.currentPhase,
@@ -146,10 +149,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         status: RoomStatus.PLAYING,
         phaseSync: sync,
         players,
+        playerSubState: phaseChanged ? null : state.playerSubState,
       };
 
       // Add phase change log
-      if (state.phase !== sync.currentPhase) {
+      if (phaseChanged) {
         newState.gameLog = [
           ...state.gameLog,
           {
@@ -168,16 +172,28 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'ACTION_ACK': {
       const ack = action.payload;
+      let message: string;
+      if (ack.success) {
+        message = ack.message ? `操作成功: ${ack.message}` : '操作成功';
+      } else if (ack.code === 'WOLF_CHAT_REQUIRED') {
+        message = `${ack.message || '须先进行狼队频道商议'} — 请使用下方狼频道发送商议后再刀`;
+      } else {
+        message = `操作失败: ${ack.message || ack.code || 'UNKNOWN'}`;
+      }
       const entry: GameLogEntry = {
         id: Date.now(),
         round: state.round,
-        phase: state.phase,
-        message: ack.success
-          ? `操作成功: ${ack.message || 'OK'}`
-          : `操作失败: ${ack.message || ack.code || 'UNKNOWN'}`,
-        type: ack.success ? 'action' : 'system',
+        phase: ack.serverPhase ?? state.phase,
+        message,
+        type: 'action',
       };
-      return { ...state, gameLog: [...state.gameLog, entry] };
+      return {
+        ...state,
+        gameLog: [...state.gameLog, entry],
+        playerSubState: ack.success
+          ? (ack.playerSubState ?? state.playerSubState)
+          : state.playerSubState,
+      };
     }
 
     case 'GAME_EVENT': {

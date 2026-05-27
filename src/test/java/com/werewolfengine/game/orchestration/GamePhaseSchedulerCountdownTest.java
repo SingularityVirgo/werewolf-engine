@@ -41,7 +41,7 @@ class GamePhaseSchedulerCountdownTest {
     @BeforeEach
     void setUp() {
         PhaseCountdown.setEnabled(true);
-        scheduler = new GamePhaseScheduler(stateMachine, turnCoordinator, phaseTimeoutHandler, actionLog);
+        scheduler = new GamePhaseScheduler(stateMachine, turnCoordinator, phaseTimeoutHandler, new com.werewolfengine.game.observability.GameActionRecorder(stateMachine, actionLog), roomId -> {});
     }
 
     @AfterEach

@@ -42,14 +42,13 @@ def post(path: str, body: dict | None = None) -> dict[str, Any]:
 def main() -> int:
     print("=== PHASE_SYNC countdown observe ===\n")
 
-    room = post("/api/room", {})
+    room = post("/api/room", {"hostUserId": 10001, "aiCount": 11})
     room_id = room["roomId"]
     print(f"roomId={room_id}")
 
-    for seat in range(1, 13):
-        post(f"/api/room/{room_id}/ready", {"seatId": seat, "ready": True})
+    post(f"/api/room/{room_id}/ready", {"seatId": 1, "ready": True})
 
-    ws = create_connection(WS_URL, timeout=10)
+    ws = create_connection(f"{WS_URL}?token=10001", timeout=10)
     _ = ws.recv()  # CONNECTED
 
     ws.send(json.dumps({
@@ -58,7 +57,7 @@ def main() -> int:
     }))
     time.sleep(0.2)
 
-    start = post(f"/api/room/{room_id}/start")
+    start = post(f"/api/room/{room_id}/start", {"hostUserId": 10001})
     print(f"start: success={start.get('success')} phase={start.get('phase')}\n")
     print(f"{'time':>8}  {'phase':<22}  countdown  (auto phase-tick ~1.5s)\n")
 

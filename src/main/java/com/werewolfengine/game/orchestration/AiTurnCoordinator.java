@@ -4,12 +4,10 @@ import com.werewolfengine.ai.api.AIService;
 import com.werewolfengine.ai.api.DecisionResult;
 import com.werewolfengine.ai.api.PlayerIntent;
 import com.werewolfengine.game.engine.GameStateMachine;
-import com.werewolfengine.game.model.ActionAck;
 import com.werewolfengine.game.model.GameActionCommand;
-import com.werewolfengine.game.model.GameActionType;
 import com.werewolfengine.game.model.GamePhase;
 import com.werewolfengine.game.model.GameRoomState;
-import com.werewolfengine.game.observability.ActionLogService;
+import com.werewolfengine.game.observability.GameActionRecorder;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -23,18 +21,18 @@ public class AiTurnCoordinator {
     private final GameStateMachine stateMachine;
     private final TurnActorResolver actorResolver;
     private final AIService aiService;
-    private final ActionLogService actionLog;
+    private final GameActionRecorder actionRecorder;
 
     public AiTurnCoordinator(
             GameStateMachine stateMachine,
             TurnActorResolver actorResolver,
             AIService aiService,
-            ActionLogService actionLog
+            GameActionRecorder actionRecorder
     ) {
         this.stateMachine = stateMachine;
         this.actorResolver = actorResolver;
         this.aiService = aiService;
-        this.actionLog = actionLog;
+        this.actionRecorder = actionRecorder;
     }
 
     /**
@@ -45,10 +43,7 @@ public class AiTurnCoordinator {
     public boolean tickOneStep(String roomId, GameRoomState room) {
         return switch (room.getPhase()) {
             case NIGHT_DEATH_ANNOUNCE, EXILE_DEATH_ANNOUNCE -> {
-                GamePhase before = room.getPhase();
-                int round = room.getRound();
-                stateMachine.advanceDayAnnounce(roomId);
-                actionLog.recordSystemEvent(roomId, round, before, "advanceDayAnnounce", null);
+                actionRecorder.recordAdvanceDayAnnounce(roomId);
                 yield true;
             }
             default -> submitNextAiIntent(roomId, room);
@@ -67,9 +62,7 @@ public class AiTurnCoordinator {
             return false;
         }
         PlayerIntent in = decision.get().intent();
-        int round = fresh.getRound();
         GamePhase phase = fresh.getPhase();
-        Integer effectiveTarget = effectiveLogTarget(fresh, in.action(), in.target());
         GameActionCommand cmd = new GameActionCommand(
                 playerId,
                 in.action(),
@@ -77,18 +70,7 @@ public class AiTurnCoordinator {
                 phase,
                 in.content()
         );
-        GameStateMachine.HandleActionResult result = stateMachine.handleAction(roomId, cmd);
-        GameRoomState after = stateMachine.getRoom(roomId).orElse(fresh);
-        ActionAck ack = result.ack();
-        actionLog.recordPlayerAction(
-                roomId, round, phase, after, cmd, ack, effectiveTarget, decision.get().modelId());
+        actionRecorder.recordAndHandle(roomId, fresh, cmd, decision.get().modelId());
         return true;
-    }
-
-    private static Integer effectiveLogTarget(GameRoomState room, GameActionType action, Integer commandTarget) {
-        if (action == GameActionType.SAVE) {
-            return room.getPendingWolfKillTarget();
-        }
-        return commandTarget;
     }
 }

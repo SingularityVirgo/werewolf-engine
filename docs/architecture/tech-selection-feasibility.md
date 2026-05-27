@@ -2,9 +2,9 @@
 
 | 属性 | 值 |
 |------|-----|
-| 版本 | v0.1.5 |
-| 日期 | 2026-05-15 |
-| 关联文档 | [PRD](../progress/requirements-mvp-v0.1.md)（**v1.0.5**，含 §4.3.7、R17a / DeepSeek）、[architecture-design-spec.md](./architecture-design-spec.md)、[developer-local-setup.md](../developer-local-setup.md) |
+| 版本 | v0.1.6 |
+| 日期 | 2026-05-27 |
+| 关联文档 | [PRD](../progress/requirements-mvp-v0.1.md)（**v1.0.17**）、[architecture-design-spec.md](./architecture-design-spec.md)、[developer-local-setup.md](../developer-local-setup.md) |
 | 项目 | werewolf-engine（**Agent Team 实战** — 12 人预女猎愚 + 愚者，人机混排 MVP） |
 
 ---
@@ -24,6 +24,8 @@
 | **不推荐首版** | 多厂商 LLM 混用、多实例集群、语音、警长全量规则与前端并行首周开发。 |
 | **关键路径** | Week1 用 **Mock AI** 跑通整局；协议 Day7 冻结后再扩 LLM 与前端。 |
 | **课题对齐** | 对局引擎 + 多 Agent + 信息隔离 + 结构化日志 = **MVP 主交付**；观战 UI = **加分**；进阶三选一 = **MVP 后** |
+
+> Week1「协议 Day7 冻结」已于 v1.0.0 完成；下文保留历史决策上下文。
 
 ---
 

@@ -1,6 +1,7 @@
 package com.werewolfengine.gateway;
 
 import com.werewolfengine.game.engine.GameEngineService;
+import com.werewolfengine.game.persistence.GameOverLifecycleService;
 import com.werewolfengine.game.orchestration.GamePhaseScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,13 +24,16 @@ class RoomPhaseTickSchedulerTest {
     @Mock
     private WsPushService wsPushService;
 
+    @Mock
+    private GameOverLifecycleService gameOverLifecycle;
+
     private RoomExecutionGuard roomGuard;
     private RoomPhaseTickScheduler scheduler;
 
     @BeforeEach
     void setUp() {
         roomGuard = new RoomExecutionGuard();
-        scheduler = new RoomPhaseTickScheduler(gameEngine, roomGuard, wsPushService);
+        scheduler = new RoomPhaseTickScheduler(gameEngine, roomGuard, wsPushService, gameOverLifecycle);
     }
 
     @Test
@@ -78,6 +82,6 @@ class RoomPhaseTickSchedulerTest {
 
         assertThat(result.status()).isEqualTo("GAME_OVER");
         verify(wsPushService).pushPhaseSyncToConnected("r1");
-        verify(gameEngine).tickPhase("r1");
+        verify(gameOverLifecycle).finalizeIfGameOver("r1");
     }
 }

@@ -43,7 +43,7 @@ flowchart LR
 | **推送** | 无（JSON 响应内带 sync） | WS 定向推送（[ADR-005](../adr/005-gateway-formal-path.md) P0 已实现） |
 | **典型用途** | A 测 SM、Mock 整局、`phase-tick` | 产品联调、Day4 验收、未来前端 |
 | **Week1 验收** | 可证明「引擎能跑完一局」 | 须证明「协议链路闭环」 |
-| **C 脚本** | `auto_play_client.py`、`tick_play_client.py` | `bot_player.py`（待对齐 §2 [bot-load-test](bot-load-test.md)） |
+| **C 脚本** | `auto_play_client.py`、`tick_play_client.py` | `scripts/formal/run_day4_formal.py`、`formal_path_smoke.py`、`formal_llm_smoke.py`（`scripts/lib/bot_player.py`） |
 
 **规则**：压测报告、README 验收勾选须 **标明路径**；仅 A 通过不能勾选 PRD §8.2 Formal 项。
 
@@ -132,14 +132,14 @@ Base: `http://localhost:8080/internal/game`（无鉴权，仅 dev）
 | `PHASE_SYNC` 主动推送 | **已实现**（MVP 推全连接座） |
 | `POST /api/room/.../phase-tick` | **已实现** |
 | `PHASE_SYNC.countdown`（P-05） | **已实现**（见 §6） |
-| Redis session | 未实现 → [auth-session](auth-session.md)、[persistence-rollout](persistence-rollout.md) |
+| Redis session | 未实现 → [ADR-007](../adr/007-persistence-redis-mysql.md)、[auth-session](auth-session.md) |
 | `action_log` MySQL | 仅内存 |
 | `GAME_EVENT` | ✅ `PerceptionLogEvents` 入队，`flushOutbound` 按可见性推送 |
 | `CHAT_MESSAGE` → `CHAT_BROADCAST` | ✅ `ChatMessageService` + `GAME_ACTION` 带 `content` |
 | `GAME_OVER` | ✅ 独立 WS，含全员身份复盘 |
 | `aiCount` / 自动分座 / 离开 / 解散 | **已实现**（见 [gateway-room-modules §4](gateway-room-modules.md)） |
 
-执行勾选：[gateway-room-ws-checklist](../gateway-room-ws-checklist.md)
+执行勾选：[gateway-room-ws](../checklists/gateway-room-ws.md)
 
 ---
 
@@ -186,3 +186,4 @@ python scripts/formal/countdown_observe.py
 | v0.2 | 2026-05-18 | 双路径、Formal 摘要、链到新 reference/ADR |
 | v0.3 | 2026-05-25 | Formal phase-tick、推送已实现；链 ADR-005 合并篇与 status |
 | v0.4 | 2026-05-25 | §6 P-05 countdown 实现、正式使用与 smoke 注记 |
+| v0.5 | 2026-05-27 | Formal 脚本已对齐 `bot_player`；checklist 迁至 checklists/ |

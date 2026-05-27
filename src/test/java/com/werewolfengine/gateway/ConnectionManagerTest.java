@@ -26,11 +26,11 @@ class ConnectionManagerTest {
         when(otherRoom.getId()).thenReturn("other");
         when(otherRoom.isOpen()).thenReturn(true);
 
-        cm.register(open);
+        cm.register(open, null);
         cm.bind("open", "r1", 1);
-        cm.register(closed);
+        cm.register(closed, null);
         cm.bind("closed", "r1", 2);
-        cm.register(otherRoom);
+        cm.register(otherRoom, null);
         cm.bind("other", "r2", 5);
 
         List<Integer> seats = cm.connectedSeatIds("r1");
@@ -44,12 +44,28 @@ class ConnectionManagerTest {
         when(session.getId()).thenReturn("s1");
         when(session.isOpen()).thenReturn(true);
 
-        cm.register(session);
+        cm.register(session, null);
         cm.bind("s1", "r1", 1);
         cm.bind("s1", "r1", 2);
 
         assertThat(cm.findBySeat("r1", 1)).isEmpty();
         assertThat(cm.findBySeat("r1", 2)).isPresent();
         assertThat(cm.connectedSeatIds("r1")).containsExactly(2);
+    }
+
+    @Test
+    void graceUnlink_keepsSeatKeyWithoutOpenSession() {
+        ConnectionManager cm = new ConnectionManager();
+        WebSocketSession session = mock(WebSocketSession.class);
+        when(session.getId()).thenReturn("s1");
+        when(session.isOpen()).thenReturn(true);
+
+        cm.register(session, 1001L);
+        cm.bind("s1", "r1", 3);
+        cm.graceUnlink("s1");
+
+        assertThat(cm.findBySession("s1")).isEmpty();
+        assertThat(cm.findBySeat("r1", 3)).isPresent();
+        assertThat(cm.connectedSeatIds("r1")).isEmpty();
     }
 }

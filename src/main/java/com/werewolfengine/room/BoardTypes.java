@@ -1,7 +1,8 @@
 package com.werewolfengine.room;
 
 /**
- * MVP board presets. Rules engine still uses a single fixed layout; {@code boardType} is reserved for product/API.
+ * MVP board presets. {@link #STANDARD_12_PRYH_IDIOT} = 预女猎 + 愚者（展示名「预女猎愚」）.
+ * Rules engine still uses a single fixed layout; {@code boardType} is reserved for product/API.
  */
 public final class BoardTypes {
 

@@ -53,7 +53,7 @@ class WsPushServiceTest {
         String roomId = "r_push";
         int seatId = 3;
         WebSocketSession session = openSession("sess-1");
-        connectionManager.register(session);
+        connectionManager.register(session, null);
         connectionManager.bind(session.getId(), roomId, seatId);
 
         PhaseSyncPayload sync = sampleSync(GamePhase.NIGHT_WOLF);
@@ -77,9 +77,9 @@ class WsPushServiceTest {
         GameRoomState room = wolfChatRoom(roomId);
         WebSocketSession wolfSession = openSession("wolf");
         WebSocketSession villagerSession = openSession("vil");
-        connectionManager.register(wolfSession);
+        connectionManager.register(wolfSession, null);
         connectionManager.bind(wolfSession.getId(), roomId, 1);
-        connectionManager.register(villagerSession);
+        connectionManager.register(villagerSession, null);
         connectionManager.bind(villagerSession.getId(), roomId, 2);
 
         OutboundMessage msg = OutboundMessage.chatBroadcast(
@@ -95,7 +95,7 @@ class WsPushServiceTest {
         String roomId = "r_evt";
         when(gameEngine.getRoomState(roomId)).thenReturn(sampleRoom(roomId));
         WebSocketSession session = openSession("evt");
-        connectionManager.register(session);
+        connectionManager.register(session, null);
         connectionManager.bind(session.getId(), roomId, 1);
 
         GameRoomState room = gameEngine.getRoomState(roomId);
@@ -132,11 +132,11 @@ class WsPushServiceTest {
         WebSocketSession s3 = mock(WebSocketSession.class);
         when(s3.getId()).thenReturn("s3");
 
-        connectionManager.register(s1);
+        connectionManager.register(s1, null);
         connectionManager.bind(s1.getId(), roomA, 1);
-        connectionManager.register(s2);
+        connectionManager.register(s2, null);
         connectionManager.bind(s2.getId(), roomA, 2);
-        connectionManager.register(s3);
+        connectionManager.register(s3, null);
         connectionManager.bind(s3.getId(), roomB, 1);
 
         when(gameEngine.buildPhaseSync(eq(roomA), any(Integer.class)))

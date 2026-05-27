@@ -5,6 +5,7 @@ import com.werewolfengine.game.model.ActionErrorCode;
 import com.werewolfengine.game.model.GameActionCommand;
 import com.werewolfengine.game.model.GameActionType;
 import com.werewolfengine.game.model.GamePhase;
+import com.werewolfengine.game.model.ConnectionState;
 import com.werewolfengine.game.model.GameRoomState;
 import com.werewolfengine.game.model.PlayerState;
 import com.werewolfengine.game.model.RoomStatus;
@@ -87,6 +88,36 @@ public class GameStateMachine {
 
     public Optional<GameRoomState> getRoom(String roomId) {
         return Optional.ofNullable(rooms.get(roomId));
+    }
+
+    public Optional<GameEngineService.UserSeatBinding> findPlayingSeatForUser(long userId) {
+        Optional<GameEngineService.UserSeatBinding> grace = Optional.empty();
+        Optional<GameEngineService.UserSeatBinding> any = Optional.empty();
+        for (GameRoomState room : rooms.values()) {
+            if (room.getStatus() != RoomStatus.PLAYING) {
+                continue;
+            }
+            for (PlayerState player : room.getPlayers().values()) {
+                if (player.getHumanUserId() != null
+                        && player.getHumanUserId() == userId
+                        && player.getConnectionState() != ConnectionState.AI_HOSTED) {
+                    GameEngineService.UserSeatBinding binding = new GameEngineService.UserSeatBinding(
+                            room.getRoomId(),
+                            player.getPlayerId(),
+                            player.getConnectionState()
+                    );
+                    if (player.getConnectionState() == ConnectionState.GRACE) {
+                        grace = Optional.of(binding);
+                    } else if (any.isEmpty()) {
+                        any = Optional.of(binding);
+                    }
+                }
+            }
+        }
+        if (grace.isPresent()) {
+            return grace;
+        }
+        return any;
     }
 
     /** Removes in-memory room after lobby dissolve (Formal path B). */
